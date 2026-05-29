@@ -1,0 +1,445 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		001 /* MyFlashcardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 101 /* MyFlashcardApp.swift */; };
+		002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 102 /* ContentView.swift */; };
+		003 /* BrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 103 /* BrowseView.swift */; };
+		004 /* InputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 104 /* InputView.swift */; };
+		005 /* FlashcardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 105 /* FlashcardView.swift */; };
+		006 /* QuizView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 106 /* QuizView.swift */; };
+		007 /* Vocabulary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 107 /* Vocabulary.swift */; };
+		008 /* ViewModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108 /* ViewModels.swift */; };
+		009 /* DataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109 /* DataService.swift */; };
+		010 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 110 /* Assets.xcassets */; };
+		011 /* SpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111 /* SpeechService.swift */; };
+		012 /* SynonymsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 112 /* SynonymsView.swift */; };
+		013 /* TextAnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113 /* TextAnalysisView.swift */; };
+		014 /* GrammarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114 /* GrammarView.swift */; };
+		015 /* TextAnalysisService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 115 /* TextAnalysisService.swift */; };
+		016 /* GrammarDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116 /* GrammarDatabase.swift */; };
+		017 /* SRSService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117 /* SRSService.swift */; };
+		018 /* SRSReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 118 /* SRSReviewView.swift */; };
+		019 /* DictationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119 /* DictationView.swift */; };
+		020 /* ClozeQuizView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120 /* ClozeQuizView.swift */; };
+		021 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 121 /* StatsView.swift */; };
+		022 /* QuizHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122 /* QuizHubView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		100 /* MyFlashcardR.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MyFlashcardR.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		101 /* MyFlashcardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyFlashcardApp.swift; sourceTree = "<group>"; };
+		102 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		103 /* BrowseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseView.swift; sourceTree = "<group>"; };
+		104 /* InputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputView.swift; sourceTree = "<group>"; };
+		105 /* FlashcardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlashcardView.swift; sourceTree = "<group>"; };
+		106 /* QuizView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizView.swift; sourceTree = "<group>"; };
+		107 /* Vocabulary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vocabulary.swift; sourceTree = "<group>"; };
+		108 /* ViewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModels.swift; sourceTree = "<group>"; };
+		109 /* DataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataService.swift; sourceTree = "<group>"; };
+		110 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		111 /* SpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechService.swift; sourceTree = "<group>"; };
+		112 /* SynonymsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynonymsView.swift; sourceTree = "<group>"; };
+		113 /* TextAnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextAnalysisView.swift; sourceTree = "<group>"; };
+		114 /* GrammarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrammarView.swift; sourceTree = "<group>"; };
+		115 /* TextAnalysisService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextAnalysisService.swift; sourceTree = "<group>"; };
+		116 /* GrammarDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrammarDatabase.swift; sourceTree = "<group>"; };
+		117 /* SRSService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SRSService.swift; sourceTree = "<group>"; };
+		118 /* SRSReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SRSReviewView.swift; sourceTree = "<group>"; };
+		119 /* DictationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationView.swift; sourceTree = "<group>"; };
+		120 /* ClozeQuizView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClozeQuizView.swift; sourceTree = "<group>"; };
+		121 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
+		122 /* QuizHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizHubView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		200 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		300 = {
+			isa = PBXGroup;
+			children = (
+				301 /* MyFlashcard */,
+				302 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		301 /* MyFlashcard */ = {
+			isa = PBXGroup;
+			children = (
+				101 /* MyFlashcardApp.swift */,
+				303 /* Models */,
+				304 /* Views */,
+				305 /* ViewModels */,
+				306 /* Services */,
+				110 /* Assets.xcassets */,
+			);
+			path = MyFlashcard;
+			sourceTree = "<group>";
+		};
+		302 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				100 /* MyFlashcardR.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		303 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				107 /* Vocabulary.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		304 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				102 /* ContentView.swift */,
+				103 /* BrowseView.swift */,
+				104 /* InputView.swift */,
+				105 /* FlashcardView.swift */,
+				106 /* QuizView.swift */,
+				112 /* SynonymsView.swift */,
+				113 /* TextAnalysisView.swift */,
+				114 /* GrammarView.swift */,
+				118 /* SRSReviewView.swift */,
+				119 /* DictationView.swift */,
+				120 /* ClozeQuizView.swift */,
+				121 /* StatsView.swift */,
+				122 /* QuizHubView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		305 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				108 /* ViewModels.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		306 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				109 /* DataService.swift */,
+				111 /* SpeechService.swift */,
+				115 /* TextAnalysisService.swift */,
+				116 /* GrammarDatabase.swift */,
+				117 /* SRSService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		400 /* MyFlashcardR */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 500 /* Build configuration list for PBXNativeTarget "MyFlashcardR" */;
+			buildPhases = (
+				401 /* Sources */,
+				200 /* Frameworks */,
+				402 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MyFlashcardR;
+			productName = MyFlashcard;
+			productReference = 100 /* MyFlashcardR.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		600 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					400 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = 601 /* Build configuration list for PBXProject "MyFlashcard" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 300;
+			productRefGroup = 302 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				400 /* MyFlashcardR */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		402 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				010 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		401 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				001 /* MyFlashcardApp.swift in Sources */,
+				002 /* ContentView.swift in Sources */,
+				003 /* BrowseView.swift in Sources */,
+				004 /* InputView.swift in Sources */,
+				005 /* FlashcardView.swift in Sources */,
+				006 /* QuizView.swift in Sources */,
+				007 /* Vocabulary.swift in Sources */,
+				008 /* ViewModels.swift in Sources */,
+				009 /* DataService.swift in Sources */,
+				011 /* SpeechService.swift in Sources */,
+				012 /* SynonymsView.swift in Sources */,
+				013 /* TextAnalysisView.swift in Sources */,
+				014 /* GrammarView.swift in Sources */,
+				015 /* TextAnalysisService.swift in Sources */,
+				016 /* GrammarDatabase.swift in Sources */,
+				017 /* SRSService.swift in Sources */,
+				018 /* SRSReviewView.swift in Sources */,
+				019 /* DictationView.swift in Sources */,
+				020 /* ClozeQuizView.swift in Sources */,
+				021 /* StatsView.swift in Sources */,
+				022 /* QuizHubView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		700 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		701 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		702 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 89W724225C;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "My Flashcard";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.MyFlashcardR;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		703 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 89W724225C;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "My Flashcard";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.MyFlashcardR;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		500 /* Build configuration list for PBXNativeTarget "MyFlashcardR" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				702 /* Debug */,
+				703 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		601 /* Build configuration list for PBXProject "MyFlashcard" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				700 /* Debug */,
+				701 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 600 /* Project object */;
+}
