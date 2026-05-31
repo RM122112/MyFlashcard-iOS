@@ -6,6 +6,7 @@ import SwiftData
 @Observable
 class BrowseViewModel {
     var searchText: String = ""
+    var selectedStatus: WordStatus?
     var vocabularyToDelete: Vocabulary?
     var showDeleteAlert: Bool = false
 
@@ -15,16 +16,17 @@ class BrowseViewModel {
     }
 
     func filteredVocabulary(_ allVocabulary: [Vocabulary]) -> [Vocabulary] {
-        if searchText.isEmpty {
-            return allVocabulary.sorted { $0.englishWord < $1.englishWord }
-        }
+        SRSService.normalizeWordAges(for: allVocabulary)
         let query = searchText.lowercased()
         return allVocabulary.filter { vocab in
-            vocab.englishWord.lowercased().contains(query) ||
-            vocab.german.lowercased().contains(query) ||
-            vocab.persian.contains(query) ||
-            vocab.exampleSentence.lowercased().contains(query)
-        }.sorted { $0.englishWord < $1.englishWord }
+            let matchesQuery = query.isEmpty ||
+                vocab.englishWord.lowercased().contains(query) ||
+                vocab.german.lowercased().contains(query) ||
+                vocab.persian.contains(query) ||
+                vocab.exampleSentence.lowercased().contains(query)
+            let matchesStatus = selectedStatus == nil || LearningStatusHelper.normalizedStatus(for: vocab) == selectedStatus
+            return matchesQuery && matchesStatus
+        }.sorted { SRSService.reviewPriority(for: $0) > SRSService.reviewPriority(for: $1) }
     }
 }
 
@@ -76,7 +78,7 @@ class InputViewModel {
         let validEntries = parsedEntries.filter { $0.isValid }
 
         guard !validEntries.isEmpty else {
-            error = "No valid entries to import"
+            error = "Es wurden keine gültigen Einträge zum Import gefunden."
             return
         }
 
@@ -105,15 +107,15 @@ class InputViewModel {
     func save(modelContext: ModelContext) -> Bool {
         // Validation
         guard !englishWord.trimmingCharacters(in: .whitespaces).isEmpty else {
-            error = "English word is required"
+            error = "Bitte gib ein englisches Wort ein."
             return false
         }
         guard !german.trimmingCharacters(in: .whitespaces).isEmpty else {
-            error = "German translation is required"
+            error = "Bitte gib die deutsche Übersetzung ein."
             return false
         }
         guard !persian.trimmingCharacters(in: .whitespaces).isEmpty else {
-            error = "Persian translation is required"
+            error = "Bitte gib die persische Übersetzung ein."
             return false
         }
 
@@ -165,13 +167,14 @@ class FlashcardViewModel {
     var isFlipped: Bool = false
 
     func loadCards(_ vocabulary: [Vocabulary]) {
-        cards = vocabulary.shuffled()
+        SRSService.normalizeWordAges(for: vocabulary)
+        cards = vocabulary.sorted { SRSService.reviewPriority(for: $0) > SRSService.reviewPriority(for: $1) }
         currentIndex = 0
         isFlipped = false
     }
 
     func shuffleCards() {
-        cards.shuffle()
+        cards = cards.shuffled().sorted { SRSService.reviewPriority(for: $0) > SRSService.reviewPriority(for: $1) }
         currentIndex = 0
         isFlipped = false
     }
@@ -197,14 +200,7 @@ class FlashcardViewModel {
     func markAsLearned(isCorrect: Bool, modelContext: ModelContext) {
         guard currentIndex < cards.count else { return }
         let card = cards[currentIndex]
-        card.timesReviewed += 1
-        if isCorrect {
-            card.timesCorrect += 1
-        }
-        card.lastReviewedAt = Date()
-        if card.timesCorrect >= 5 {
-            card.isLearned = true
-        }
+        SRSService.applyReview(to: card, quality: isCorrect ? .perfect : .incorrect_hard)
         try? modelContext.save()
         nextCard()
     }
@@ -231,7 +227,10 @@ class QuizViewModel {
             return
         }
 
-        let shuffled = vocabulary.shuffled()
+        SRSService.normalizeWordAges(for: vocabulary)
+        let shuffled = vocabulary
+            .shuffled()
+            .sorted { SRSService.reviewPriority(for: $0) > SRSService.reviewPriority(for: $1) }
         let selected = Array(shuffled.prefix(10))
 
         questions = selected.map { vocab in
@@ -254,7 +253,7 @@ class QuizViewModel {
         }
 
         // Generate wrong options
-        var wrongOptions = allVocab
+        let wrongOptions = allVocab
             .filter { $0.id != vocab.id }
             .shuffled()
             .prefix(3)
@@ -291,14 +290,7 @@ class QuizViewModel {
 
         // Update vocabulary progress
         let vocab = questions[currentIndex].vocabulary
-        vocab.timesReviewed += 1
-        if isCorrect {
-            vocab.timesCorrect += 1
-        }
-        vocab.lastReviewedAt = Date()
-        if vocab.timesCorrect >= 5 {
-            vocab.isLearned = true
-        }
+        SRSService.applyReview(to: vocab, quality: isCorrect ? .perfect : .incorrect_hard)
         try? modelContext.save()
     }
 

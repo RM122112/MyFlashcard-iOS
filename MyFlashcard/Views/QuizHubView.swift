@@ -5,10 +5,10 @@ struct QuizHubView: View {
     @State private var selectedMode: QuizMode? = nil
 
     enum QuizMode: String, CaseIterable, Identifiable {
-        case multipleChoice = "Multiple Choice"
-        case cloze = "Cloze / Fill-in"
-        case dictation = "Dictation"
-        case srs = "SRS Review"
+        case multipleChoice = "Multiple-Choice"
+        case cloze = "Lückentext"
+        case dictation = "Diktat"
+        case srs = "SRS-Wiederholung"
 
         var id: String { rawValue }
 
@@ -23,10 +23,10 @@ struct QuizHubView: View {
 
         var description: String {
             switch self {
-            case .multipleChoice: return "Choose the correct translation"
-            case .cloze: return "Fill in the missing word"
-            case .dictation: return "Hear the word and type it"
-            case .srs: return "Smart review based on SM-2 algorithm"
+            case .multipleChoice: return "Wähle die richtige Übersetzung"
+            case .cloze: return "Ergänze das fehlende Wort"
+            case .dictation: return "Höre das Wort und tippe es ein"
+            case .srs: return "Intelligente Wiederholung auf Basis des SM-2-Algorithmus"
             }
         }
 
@@ -44,7 +44,7 @@ struct QuizHubView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    Text("Choose your learning mode")
+                    Text("Wähle deinen Lernmodus")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .padding(.top)
@@ -90,11 +90,11 @@ struct QuizHubView: View {
                 .navigationBarTitleDisplayMode(.inline)
         case .cloze:
             ClozeQuizView()
-                .navigationTitle("Cloze Quiz")
+                .navigationTitle("Lückentext")
                 .navigationBarTitleDisplayMode(.inline)
         case .dictation:
             DictationView()
-                .navigationTitle("Dictation")
+                .navigationTitle("Diktat")
                 .navigationBarTitleDisplayMode(.inline)
         case .srs:
             SRSReviewView()

@@ -20,6 +20,13 @@ struct StatsView: View {
         SRSService.dueCards(from: vocabulary).count
     }
 
+    private var statusCounts: [WordStatus: Int] {
+        SRSService.normalizeWordAges(for: vocabulary)
+        return Dictionary(uniqueKeysWithValues: WordStatus.allCases.map { status in
+            (status, vocabulary.filter { LearningStatusHelper.normalizedStatus(for: $0) == status }.count)
+        })
+    }
+
     private var weakWords: [Vocabulary] {
         vocabulary
             .filter { $0.timesReviewed >= 3 }
@@ -55,9 +62,9 @@ struct StatsView: View {
             // Fallback: Accuracy buckets
             let _ = nouns; let _ = verbs
             result = [
-                "Learned": learnedCount > 0 ? 100.0 : 0,
-                "In Progress": Double(vocabulary.filter { $0.timesReviewed > 0 && !$0.isLearned }.count),
-                "New": Double(vocabulary.filter { $0.timesReviewed == 0 }.count)
+                "Bekannt": learnedCount > 0 ? 100.0 : 0,
+                "In Bearbeitung": Double(vocabulary.filter { $0.timesReviewed > 0 && !$0.isLearned }.count),
+                "Neu": Double(vocabulary.filter { $0.timesReviewed == 0 }.count)
             ]
         }
         return result
@@ -81,20 +88,23 @@ struct StatsView: View {
 
                     // SRS Overview
                     srsOverviewSection
+
+                    // Word Buckets
+                    wordBucketSection
                 }
                 .padding()
             }
-            .navigationTitle("📊 Statistics")
+            .navigationTitle("📊 Lernstatistiken")
         }
     }
 
     // MARK: - Overview Cards
     private var overviewCards: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            statCard(title: "Total Words", value: "\(totalCount)", icon: "textformat.abc", color: .blue)
-            statCard(title: "Learned", value: "\(learnedCount)", icon: "checkmark.seal.fill", color: .green)
-            statCard(title: "Due Today", value: "\(dueCount)", icon: "calendar.badge.clock", color: .orange)
-            statCard(title: "Today Reviewed", value: "\(todayReviewedCount)", icon: "brain.head.profile", color: .purple)
+            statCard(title: "Gesamt", value: "\(totalCount)", icon: "textformat.abc", color: .blue)
+            statCard(title: "Bekannt", value: "\(learnedCount)", icon: "checkmark.seal.fill", color: .green)
+            statCard(title: "Heute fällig", value: "\(dueCount)", icon: "calendar.badge.clock", color: .orange)
+            statCard(title: "Heute wiederholt", value: "\(todayReviewedCount)", icon: "brain.head.profile", color: .purple)
         }
     }
 
@@ -119,7 +129,7 @@ struct StatsView: View {
     // MARK: - Streak
     private var streakSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("🔥 Streak & Goals")
+            Text("🔥 Streak & Tagesziel")
                 .font(.headline)
 
             HStack(spacing: 16) {
@@ -127,7 +137,7 @@ struct StatsView: View {
                     Text("\(currentStreak)")
                         .font(.system(size: 48, weight: .bold))
                         .foregroundColor(.orange)
-                    Text("Day Streak")
+                    Text("Tage in Folge")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -136,14 +146,14 @@ struct StatsView: View {
                 Divider().frame(height: 60)
 
                 VStack(spacing: 8) {
-                    Text("Daily Goal: \(dailyGoal) cards")
+                    Text("Tagesziel: \(dailyGoal) Karten")
                         .font(.subheadline)
                     ProgressView(value: Double(min(todayReviewedCount, dailyGoal)), total: Double(dailyGoal))
                         .tint(.green)
-                    Text("\(todayReviewedCount) / \(dailyGoal) today")
+                    Text("\(todayReviewedCount) / \(dailyGoal) heute")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Stepper("Goal: \(dailyGoal)", value: $dailyGoal, in: 5...50, step: 5)
+                    Stepper("Ziel: \(dailyGoal)", value: $dailyGoal, in: 5...50, step: 5)
                         .font(.caption)
                 }
                 .frame(maxWidth: .infinity)
@@ -157,13 +167,13 @@ struct StatsView: View {
     // MARK: - Weekly Chart
     private var weeklyChartSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("📅 Last 7 Days")
+            Text("📅 Letzte 7 Tage")
                 .font(.headline)
 
             Chart(weeklyData) { day in
                 BarMark(
-                    x: .value("Day", day.dayLabel),
-                    y: .value("Cards", day.count)
+                    x: .value("Tag", day.dayLabel),
+                    y: .value("Karten", day.count)
                 )
                 .foregroundStyle(day.count >= dailyGoal ? Color.green : Color.blue)
                 .annotation(position: .top) {
@@ -184,9 +194,9 @@ struct StatsView: View {
 
             HStack {
                 Circle().fill(.green).frame(width: 10, height: 10)
-                Text("Goal reached")
+                Text("Ziel erreicht")
                 Circle().fill(.blue).frame(width: 10, height: 10)
-                Text("Below goal")
+                Text("Unter dem Ziel")
             }
             .font(.caption)
             .foregroundColor(.secondary)
@@ -196,11 +206,11 @@ struct StatsView: View {
     // MARK: - Weak Words
     private var weakWordsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("⚠️ Problematic Words (Top 10)")
+            Text("⚠️ Schwierige Wörter (Top 10)")
                 .font(.headline)
 
             if weakWords.isEmpty {
-                Text("Review more words to see your weak spots!")
+                Text("Wiederhole mehr Wörter, um hier deine Lernschwerpunkte zu sehen.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .padding()
@@ -248,13 +258,13 @@ struct StatsView: View {
     // MARK: - SRS Overview
     private var srsOverviewSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("🧠 SRS Schedule")
+            Text("🧠 SRS-Plan")
                 .font(.headline)
 
             let upcoming = upcomingReviewData()
 
             if upcoming.isEmpty {
-                Text("No upcoming reviews scheduled yet.")
+                Text("Aktuell sind noch keine weiteren Wiederholungen eingeplant.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .padding()
@@ -277,6 +287,24 @@ struct StatsView: View {
         }
     }
 
+    private var wordBucketSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("🗂️ Wortbereiche")
+                .font(.headline)
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                statCard(title: "Neue Wörter", value: "\(statusCounts[.newWord] ?? 0)", icon: "sparkles", color: .blue)
+                statCard(title: "Alte Wörter", value: "\(statusCounts[.oldWord] ?? 0)", icon: "clock.arrow.circlepath", color: .purple)
+                statCard(title: "Bekannte Wörter", value: "\(statusCounts[.knownWord] ?? 0)", icon: "checkmark.circle.fill", color: .green)
+                statCard(title: "Unbekannte Wörter", value: "\(statusCounts[.unknownWord] ?? 0)", icon: "exclamationmark.triangle.fill", color: .red)
+            }
+
+            Text("Neue Wörter wechseln nach 30 Tagen automatisch in den Bereich ‚Alte Wörter‘. Falsch beantwortete Wörter bleiben stärker im Fokus und werden bei Wiederholungen priorisiert.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
     // MARK: - Helpers
     private func upcomingReviewData() -> [LabeledCount] {
         let cal = Calendar.current
@@ -288,7 +316,7 @@ struct StatsView: View {
                 return cal.startOfDay(for: next) == day
             }.count
             guard count > 0 else { return nil }
-            let f = DateFormatter(); f.dateFormat = offset == 0 ? "'Today'" : "EEE"
+            let f = DateFormatter(); f.dateFormat = offset == 0 ? "'Heute'" : "EEE"
             return LabeledCount(label: f.string(from: day), count: count)
         }
     }

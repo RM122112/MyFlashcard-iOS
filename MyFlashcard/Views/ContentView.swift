@@ -9,17 +9,17 @@ struct ContentView: View {
         TabView {
             BrowseView()
                 .tabItem {
-                    Label("Browse", systemImage: "list.bullet")
+                    Label("Wörter", systemImage: "list.bullet")
                 }
 
             InputView()
                 .tabItem {
-                    Label("Add", systemImage: "plus.circle")
+                    Label("Hinzufügen", systemImage: "plus.circle")
                 }
 
             FlashcardView()
                 .tabItem {
-                    Label("Cards", systemImage: "rectangle.stack")
+                    Label("Karten", systemImage: "rectangle.stack")
                 }
 
             QuizHubView()
@@ -29,17 +29,17 @@ struct ContentView: View {
 
             AIChatView()
                 .tabItem {
-                    Label("AI Chat", systemImage: "sparkles")
+                    Label("KI-Chat", systemImage: "sparkles")
                 }
 
             GrammarView()
                 .tabItem {
-                    Label("Grammar", systemImage: "book")
+                    Label("Grammatik", systemImage: "book")
                 }
 
             StatsView()
                 .tabItem {
-                    Label("Stats", systemImage: "chart.bar.fill")
+                    Label("Statistik", systemImage: "chart.bar.fill")
                 }
         }
         .onAppear {

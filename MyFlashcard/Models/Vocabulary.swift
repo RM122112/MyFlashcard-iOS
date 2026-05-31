@@ -2,6 +2,55 @@ import Foundation
 import SwiftData
 import Combine
 
+enum WordStatus: String, CaseIterable, Codable {
+    case newWord = "NEW_WORD"
+    case oldWord = "OLD_WORD"
+    case knownWord = "KNOWN_WORD"
+    case unknownWord = "UNKNOWN_WORD"
+
+    var title: String {
+        switch self {
+        case .newWord: return "Neue Wörter"
+        case .oldWord: return "Alte Wörter"
+        case .knownWord: return "Bekannte Wörter"
+        case .unknownWord: return "Unbekannte Wörter"
+        }
+    }
+}
+
+enum LearningStatusHelper {
+    static let thirtyDays: TimeInterval = 30 * 24 * 60 * 60
+
+    static func normalizedStatus(for vocabulary: Vocabulary, now: Date = Date()) -> WordStatus {
+        switch vocabulary.wordStatusValue {
+        case .knownWord, .unknownWord:
+            return vocabulary.wordStatusValue
+        case .newWord, .oldWord:
+            return now.timeIntervalSince(vocabulary.createdAt) >= thirtyDays ? .oldWord : .newWord
+        }
+    }
+
+    static func statusAfterReview(for vocabulary: Vocabulary, isCorrect: Bool, quality: Int, now: Date = Date()) -> WordStatus {
+        let normalized = normalizedStatus(for: vocabulary, now: now)
+        if !isCorrect || quality <= 2 { return .unknownWord }
+        if quality >= 4 { return .knownWord }
+        if normalized == .newWord, now.timeIntervalSince(vocabulary.createdAt) >= thirtyDays { return .oldWord }
+        return normalized
+    }
+
+    static func reviewPriority(for vocabulary: Vocabulary, now: Date = Date()) -> Int {
+        let status = normalizedStatus(for: vocabulary, now: now)
+        let dueBoost = (vocabulary.srsNextReview == nil || vocabulary.srsNextReview! <= now) ? 10 : 0
+        let weaknessBoost = max(vocabulary.timesReviewed - vocabulary.timesCorrect, 0)
+        switch status {
+        case .unknownWord: return 100 + dueBoost + weaknessBoost
+        case .oldWord: return 70 + dueBoost + weaknessBoost
+        case .newWord: return 55 + dueBoost + weaknessBoost
+        case .knownWord: return 25 + dueBoost
+        }
+    }
+}
+
 /// Vocabulary Model - Represents a vocabulary entry
 @Model
 final class Vocabulary {
@@ -15,6 +64,9 @@ final class Vocabulary {
     var lastReviewedAt: Date?
     var isLearned: Bool = false
     var createdAt: Date = Date()
+    var wordStatus: String = WordStatus.newWord.rawValue
+    var lastQuizCorrect: Bool?
+    var lastStatusChangedAt: Date?
 
     // SRS (SM-2) fields
     var srsInterval: Int = 1        // days until next review
@@ -40,7 +92,10 @@ final class Vocabulary {
         isLearned: Bool = false,
         tags: String = "",
         cefrLevel: String = "",
-        contextSentences: String = ""
+        contextSentences: String = "",
+        wordStatus: WordStatus = .newWord,
+        lastQuizCorrect: Bool? = nil,
+        lastStatusChangedAt: Date? = nil
     ) {
         self.id = UUID()
         self.englishWord = englishWord
@@ -52,6 +107,9 @@ final class Vocabulary {
         self.lastReviewedAt = lastReviewedAt
         self.isLearned = isLearned
         self.createdAt = Date()
+        self.wordStatus = wordStatus.rawValue
+        self.lastQuizCorrect = lastQuizCorrect
+        self.lastStatusChangedAt = lastStatusChangedAt
         self.srsInterval = 1
         self.srsEaseFactor = 2.5
         self.srsRepetitions = 0
@@ -65,6 +123,11 @@ final class Vocabulary {
     var accuracy: Int {
         guard timesReviewed > 0 else { return 0 }
         return (timesCorrect * 100) / timesReviewed
+    }
+
+    var wordStatusValue: WordStatus {
+        get { WordStatus(rawValue: wordStatus) ?? .newWord }
+        set { wordStatus = newValue.rawValue }
     }
 
     /// Tag list
@@ -148,16 +211,16 @@ enum QuestionType: CaseIterable {
     var title: String {
         switch self {
         case .englishToGerman: return "🇬🇧 → 🇩🇪"
-        case .englishToPersian: return "🇬🇧 → 🇮🇷"
+        case .englishToPersian: return "🇬🇧 → 🇦🇫"
         case .germanToEnglish: return "🇩🇪 → 🇬🇧"
         }
     }
 
     var instruction: String {
         switch self {
-        case .englishToGerman: return "Translate to German:"
-        case .englishToPersian: return "Translate to Persian:"
-        case .germanToEnglish: return "Translate to English:"
+        case .englishToGerman: return "Übersetze ins Deutsche:"
+        case .englishToPersian: return "Übersetze ins Persische:"
+        case .germanToEnglish: return "Übersetze ins Englische:"
         }
     }
 }
@@ -199,6 +262,27 @@ enum GrammarCategory: String, CaseIterable, Codable {
     case negation = "Negation"
     case comparatives = "Comparatives"
     case phrasalVerbs = "Phrasal Verbs"
+
+    var localizedTitle: String {
+        switch self {
+        case .tenses: return "Zeitformen"
+        case .articles: return "Artikel"
+        case .prepositions: return "Präpositionen"
+        case .pronouns: return "Pronomen"
+        case .adjectives: return "Adjektive"
+        case .adverbs: return "Adverbien"
+        case .conjunctions: return "Konjunktionen"
+        case .modals: return "Modalverben"
+        case .conditionals: return "Konditionalsätze"
+        case .passiveVoice: return "Passiv"
+        case .reportedSpeech: return "Indirekte Rede"
+        case .questions: return "Fragen"
+        case .negation: return "Verneinung"
+        case .comparatives: return "Vergleiche"
+        case .phrasalVerbs: return "Phrasal Verbs"
+        }
+    }
+
     var icon: String {
         switch self {
         case .tenses: return "clock"

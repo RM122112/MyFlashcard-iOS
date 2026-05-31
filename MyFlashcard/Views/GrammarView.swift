@@ -14,26 +14,26 @@ enum GrammarChapterCatalog {
     static let chapters: [GrammarChapter] = [
         GrammarChapter(
             id: "foundations",
-            title: "Foundations",
-            description: "Articles, pronouns, sentence basics.",
+            title: "Grundlagen",
+            description: "Artikel, Pronomen und Satzgrundlagen.",
             categories: [.articles, .pronouns, .questions, .negation]
         ),
         GrammarChapter(
             id: "verb_system",
-            title: "Verb System",
-            description: "Tenses, modal verbs, passive constructions.",
+            title: "Verbensystem",
+            description: "Zeitformen, Modalverben und Passivkonstruktionen.",
             categories: [.tenses, .modals, .passiveVoice]
         ),
         GrammarChapter(
             id: "connections",
-            title: "Connections",
-            description: "Prepositions, conditionals, reported speech.",
+            title: "Verknüpfungen",
+            description: "Präpositionen, Konditionalsätze und indirekte Rede.",
             categories: [.prepositions, .conditionals, .reportedSpeech, .conjunctions]
         ),
         GrammarChapter(
             id: "accuracy",
-            title: "Accuracy",
-            description: "Comparisons, phrasal verbs and frequent mistakes.",
+            title: "Genauigkeit",
+            description: "Vergleiche, Phrasal Verbs und häufige Fehler.",
             categories: [.comparatives, .phrasalVerbs, .adjectives, .adverbs]
         )
     ]
@@ -253,14 +253,14 @@ struct GrammarView: View {
                     SearchSection(searchText: $viewModel.searchText)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Chapters")
+                        Text("Kapitel")
                             .font(.headline)
                             .frame(maxWidth: .infinity, alignment: .leading)
 
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
                                 ChapterChip(
-                                    title: "All",
+                                    title: "Alle",
                                     subtitle: "\(viewModel.completedCount)/\(viewModel.rules.count)",
                                     progress: viewModel.progressFraction,
                                     isSelected: viewModel.selectedChapterId == nil
@@ -286,7 +286,7 @@ struct GrammarView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             FilterChip(
-                                title: "Favorites",
+                                title: "Favoriten",
                                 systemImage: viewModel.favoritesOnly ? "heart.fill" : "heart",
                                 isSelected: viewModel.favoritesOnly
                             ) {
@@ -294,7 +294,7 @@ struct GrammarView: View {
                             }
 
                             FilterChip(
-                                title: "All categories",
+                                title: "Alle Kategorien",
                                 systemImage: "square.grid.2x2",
                                 isSelected: viewModel.selectedCategory == nil
                             ) {
@@ -303,7 +303,7 @@ struct GrammarView: View {
 
                             ForEach(viewModel.allCategories, id: \.self) { category in
                                 FilterChip(
-                                    title: category.rawValue,
+                                    title: category.localizedTitle,
                                     systemImage: category.icon,
                                     isSelected: viewModel.selectedCategory == category
                                 ) {
@@ -315,7 +315,7 @@ struct GrammarView: View {
                     }
 
                     if viewModel.filteredRules.isEmpty {
-                        ContentUnavailableView("No rules found", systemImage: "book.closed")
+                        ContentUnavailableView("Keine Regeln gefunden", systemImage: "book.closed")
                             .frame(maxWidth: .infinity)
                             .padding(.top, 24)
                     } else {
@@ -336,7 +336,7 @@ struct GrammarView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Grammar Hub")
+            .navigationTitle("Grammatik-Hub")
             .animation(.easeInOut(duration: 0.2), value: viewModel.filteredRules.count)
         }
     }
@@ -352,15 +352,15 @@ private struct ProgressCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("Learning Progress", systemImage: "chart.bar.fill")
+            Label("Lernfortschritt", systemImage: "chart.bar.fill")
                 .font(.headline)
             ProgressView(value: fraction)
                 .progressViewStyle(.linear)
             HStack {
-                Text("\(completed)/\(total) completed")
+                Text("\(completed)/\(total) abgeschlossen")
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("\(favorites) favorites")
+                Text("\(favorites) Favoriten")
                     .foregroundStyle(.secondary)
             }
             .font(.caption)
@@ -384,7 +384,7 @@ private struct SearchSection: View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
-            TextField("Search rules, formulas, examples...", text: $searchText)
+            TextField("Regeln, Formeln und Beispiele durchsuchen ...", text: $searchText)
                 .textInputAutocapitalization(.never)
             if !searchText.isEmpty {
                 Button {
@@ -408,7 +408,7 @@ private struct RecommendationCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("Recommended from AI Chat", systemImage: "sparkles")
+            Label("Empfohlen aus dem KI-Chat", systemImage: "sparkles")
                 .font(.headline)
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -514,7 +514,7 @@ private struct GrammarRuleCard: View {
                     HStack(spacing: 6) {
                         Image(systemName: rule.category.icon)
                             .foregroundStyle(style.accent)
-                        Text(rule.category.rawValue)
+                        Text(rule.category.localizedTitle)
                             .font(.caption)
                             .foregroundStyle(style.accent)
                     }
@@ -555,7 +555,7 @@ private struct GrammarRuleCard: View {
 
                 if !rule.examples.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
-                        Label("English Examples", systemImage: "text.quote")
+                        Label("Englische Beispiele", systemImage: "text.quote")
                             .font(.caption)
                             .fontWeight(.semibold)
                             .foregroundStyle(.secondary)
@@ -568,7 +568,7 @@ private struct GrammarRuleCard: View {
 
                 if !rule.tips.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
-                        Label("Important Notes", systemImage: "lightbulb.fill")
+                        Label("Wichtige Hinweise", systemImage: "lightbulb.fill")
                             .font(.caption)
                             .fontWeight(.semibold)
                             .foregroundStyle(style.accent)
@@ -583,7 +583,7 @@ private struct GrammarRuleCard: View {
 
             Button(action: onToggleExpanded) {
                 HStack {
-                    Text(isExpanded ? "Show less" : "Show more")
+                    Text(isExpanded ? "Weniger anzeigen" : "Mehr anzeigen")
                     Spacer()
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                 }

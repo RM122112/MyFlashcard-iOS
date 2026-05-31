@@ -83,6 +83,7 @@ struct SRSService {
 
     /// Apply SRS update to a Vocabulary object
     static func applyReview(to vocab: Vocabulary, quality: Quality) {
+        normalizeWordAges(for: [vocab])
         let currentInterval = vocab.srsInterval
         let currentEF = vocab.srsEaseFactor
         let currentReps = vocab.srsRepetitions
@@ -107,20 +108,40 @@ struct SRSService {
 
         // Mark as learned after 5 successful repetitions
         vocab.isLearned = newReps >= 5
+        vocab.lastQuizCorrect = quality.rawValue >= 3
+        vocab.wordStatusValue = LearningStatusHelper.statusAfterReview(
+            for: vocab,
+            isCorrect: quality.rawValue >= 3,
+            quality: quality.rawValue,
+            now: Date()
+        )
+        vocab.lastStatusChangedAt = Date()
     }
 
     /// Cards due for review today
     static func dueCards(from vocabulary: [Vocabulary]) -> [Vocabulary] {
+        normalizeWordAges(for: vocabulary)
         let now = Date()
         return vocabulary.filter { vocab in
             guard let nextReview = vocab.srsNextReview else { return true }
             return nextReview <= now
         }.sorted { a, b in
-            // Prioritize: never reviewed, then most overdue
-            let aDate = a.srsNextReview ?? Date.distantPast
-            let bDate = b.srsNextReview ?? Date.distantPast
-            return aDate < bDate
+            reviewPriority(for: a, now: now) > reviewPriority(for: b, now: now)
         }
+    }
+
+    static func normalizeWordAges(for vocabulary: [Vocabulary], now: Date = Date()) {
+        for vocab in vocabulary {
+            let normalized = LearningStatusHelper.normalizedStatus(for: vocab, now: now)
+            if normalized != vocab.wordStatusValue {
+                vocab.wordStatusValue = normalized
+                vocab.lastStatusChangedAt = now
+            }
+        }
+    }
+
+    static func reviewPriority(for vocabulary: Vocabulary, now: Date = Date()) -> Int {
+        LearningStatusHelper.reviewPriority(for: vocabulary, now: now)
     }
 
     /// Difficulty label based on ease factor

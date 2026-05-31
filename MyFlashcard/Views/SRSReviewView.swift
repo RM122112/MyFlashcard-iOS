@@ -34,7 +34,7 @@ struct SRSReviewView: View {
                     cardArea(card: card)
                 }
             }
-            .navigationTitle("🧠 SRS Review")
+            .navigationTitle("🧠 SRS-Wiederholung")
             .onAppear { loadDueCards() }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -50,7 +50,7 @@ struct SRSReviewView: View {
     private var srsStatusBar: some View {
         HStack {
             VStack(alignment: .leading) {
-                Text("📅 Due today")
+                Text("📅 Heute fällig")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Text("\(dueCards.count)")
@@ -58,7 +58,7 @@ struct SRSReviewView: View {
             }
             Spacer()
             VStack {
-                Text("✅ Correct")
+                Text("✅ Richtig")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Text("\(sessionCorrect)")
@@ -66,7 +66,7 @@ struct SRSReviewView: View {
             }
             Spacer()
             VStack(alignment: .trailing) {
-                Text("📊 Progress")
+                Text("📊 Fortschritt")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Text("\(currentIndex)/\(dueCards.count)")
@@ -83,7 +83,7 @@ struct SRSReviewView: View {
             ProgressView(value: Double(currentIndex), total: Double(dueCards.count))
                 .padding(.horizontal)
 
-            Text("Tap card to reveal answer")
+            Text("Tippe auf die Karte, um die Antwort zu sehen")
                 .font(.caption)
                 .foregroundColor(.secondary)
 
@@ -104,7 +104,7 @@ struct SRSReviewView: View {
                                     .cornerRadius(8)
                             }
                             Button(action: { speech.speak(card.englishWord) }) {
-                                Label("Hear", systemImage: "speaker.wave.2.fill")
+                                Label("Anhören", systemImage: "speaker.wave.2.fill")
                                     .font(.callout)
                             }
                             .buttonStyle(.bordered)
@@ -180,7 +180,7 @@ struct SRSReviewView: View {
     // MARK: - Quality Buttons
     private func qualityButtons(card: Vocabulary) -> some View {
         VStack(spacing: 10) {
-            Text("How well did you remember?")
+            Text("Wie gut konntest du dich erinnern?")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             HStack(spacing: 8) {
@@ -226,18 +226,18 @@ struct SRSReviewView: View {
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 80))
                 .foregroundColor(.green)
-            Text("All caught up! 🎉")
+            Text("Alles erledigt! 🎉")
                 .font(.title).bold()
-            Text("No cards due for review today.")
+            Text("Heute sind keine Karten mehr fällig.")
                 .foregroundColor(.secondary)
             VStack(alignment: .leading, spacing: 8) {
-                Text("📊 Your vocabulary stats:")
+                Text("📊 Deine nächsten Wiederholungen:")
                     .font(.headline)
                 ForEach(upcomingReviews(), id: \.0) { day, count in
                     HStack {
                         Text(day)
                         Spacer()
-                        Text("\(count) cards")
+                        Text("\(count) Karten")
                             .foregroundColor(.blue)
                     }
                 }
@@ -274,13 +274,13 @@ struct SRSReviewView: View {
         VStack(spacing: 20) {
             Text(sessionCorrect == sessionTotal ? "🏆" : sessionCorrect > sessionTotal / 2 ? "🎉" : "📚")
                 .font(.system(size: 80))
-            Text("Session Complete!")
+            Text("Sitzung abgeschlossen!")
                 .font(.title).bold()
-            Text("\(sessionCorrect) / \(sessionTotal) correct")
+            Text("\(sessionCorrect) / \(sessionTotal) richtig")
                 .font(.title2)
-            Text("Next review scheduled by SRS")
+            Text("Die nächste Wiederholung wurde vom SRS eingeplant")
                 .foregroundColor(.secondary)
-            Button("Start New Session") {
+            Button("Neue Sitzung starten") {
                 loadDueCards()
                 isFinished = false
             }

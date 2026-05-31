@@ -2,7 +2,8 @@ import Foundation
 import AVFoundation
 
 /// Speech Service - American English pronunciation
-class SpeechService: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
+@MainActor
+class SpeechService: NSObject, ObservableObject, @preconcurrency AVSpeechSynthesizerDelegate {
     static let shared = SpeechService()
     
     private let synthesizer = AVSpeechSynthesizer()

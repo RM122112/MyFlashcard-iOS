@@ -1,6 +1,6 @@
 # MyFlashcard iOS
 
-Native SwiftUI flashcard app with AI chat and grammar hub.
+Native SwiftUI flashcard app with AI chat, grammar hub, and a dedicated dictionary detail view.
 
 ## What was added
 
@@ -10,11 +10,14 @@ Native SwiftUI flashcard app with AI chat and grammar hub.
 - Grammar topic recommendations shared from AI chat to Grammar Hub.
 - Grammar Hub chapters, search, favorites, completion progress, and expandable cards.
 - Local persistence for favorites/completion and recommendations using `UserDefaults`.
+- Dedicated dictionary detail view with clickable source link, grouped hits, and a reload action.
+- Bamooz dictionary parsing with live lookup and cache-aware display state.
 
 ## Main files
 
 - `Views/TextAnalysisView.swift`
 - `Views/GrammarView.swift`
+- `Views/DictionaryDetailView.swift`
 - `Models/Vocabulary.swift`
 
 ## Build
@@ -27,4 +30,5 @@ xcodebuild -project /Users/rezamousavi/Downloads/MyFlashcardOS/MyFlashcard.xcode
 
 - Build currently succeeds.
 - Existing warnings outside this change may still appear (for example in `SpeechService.swift`).
+- The dictionary detail view is embedded in `BrowseView` and `TextAnalysisView` via navigation links.
 

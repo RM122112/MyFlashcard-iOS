@@ -23,7 +23,7 @@ struct ClozeQuizView: View {
     var body: some View {
         VStack(spacing: 20) {
             if vocabulary.isEmpty {
-                ContentUnavailableView("No Words", systemImage: "text.badge.plus", description: Text("Add vocabulary first!"))
+                ContentUnavailableView("Keine Wörter vorhanden", systemImage: "text.badge.plus", description: Text("Füge zuerst Wörter hinzu."))
             } else if isFinished {
                 resultView
             } else if questions.isEmpty {
@@ -41,12 +41,12 @@ struct ClozeQuizView: View {
             Image(systemName: "text.badge.checkmark")
                 .font(.system(size: 70))
                 .foregroundColor(.purple)
-            Text("Cloze Quiz")
+            Text("Lückentext")
                 .font(.title).bold()
-            Text("Fill in the blank with the correct word")
+            Text("Ergänze die Lücke mit dem richtigen Wort")
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
-            Button("Start") {
+            Button("Starten") {
                 generateQuestions()
             }
             .buttonStyle(.borderedProminent)
@@ -68,7 +68,7 @@ struct ClozeQuizView: View {
             .font(.subheadline)
 
             VStack(spacing: 16) {
-                Text("Fill in the blank:")
+                Text("Ergänze die Lücke:")
                     .font(.caption)
                     .foregroundColor(.secondary)
 
@@ -84,7 +84,7 @@ struct ClozeQuizView: View {
                 // Translations as hint
                 VStack(spacing: 4) {
                     Text("🇩🇪 \(q.vocab.german)")
-                    Text("🇮🇷 \(q.vocab.persian)")
+                    Text("🇦🇫 \(q.vocab.persian)")
                         .environment(\.layoutDirection, .rightToLeft)
                 }
                 .font(.subheadline)
@@ -95,7 +95,7 @@ struct ClozeQuizView: View {
             }
 
             // Input
-            TextField("Type the missing word...", text: $userAnswer)
+            TextField("Tippe das fehlende Wort ein ...", text: $userAnswer)
                 .textFieldStyle(.roundedBorder)
                 .font(.title2)
                 .autocorrectionDisabled()
@@ -107,7 +107,7 @@ struct ClozeQuizView: View {
                 HStack {
                     Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
                         .foregroundColor(isCorrect ? .green : .red)
-                    Text(isCorrect ? "Correct! 🎉" : "Answer: \(q.vocab.englishWord)")
+                    Text(isCorrect ? "Richtig! 🎉" : "Antwort: \(q.vocab.englishWord)")
                         .foregroundColor(isCorrect ? .green : .red)
                 }
                 .font(.subheadline)
@@ -115,14 +115,14 @@ struct ClozeQuizView: View {
 
             if !showResult {
                 Button(action: { checkAnswer(q) }) {
-                    Label("Check", systemImage: "checkmark")
+                    Label("Prüfen", systemImage: "checkmark")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(userAnswer.trimmingCharacters(in: .whitespaces).isEmpty)
             } else {
                 Button(action: next) {
-                    Label("Next", systemImage: "arrow.right")
+                    Label("Weiter", systemImage: "arrow.right")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -142,14 +142,14 @@ struct ClozeQuizView: View {
         VStack(spacing: 20) {
             Text(correctCount == questions.count ? "🏆" : correctCount > questions.count / 2 ? "🎉" : "📚")
                 .font(.system(size: 80))
-            Text("Cloze Quiz Complete!")
+            Text("Lückentext abgeschlossen!")
                 .font(.title).bold()
-            Text("\(correctCount) / \(questions.count) correct")
+            Text("\(correctCount) / \(questions.count) richtig")
                 .font(.title2)
             Text("\(Int(Double(correctCount) / Double(questions.count) * 100))%")
                 .font(.system(size: 60, weight: .bold))
                 .foregroundColor(.purple)
-            Button("Play Again") {
+            Button("Noch einmal") {
                 generateQuestions()
                 isFinished = false
             }

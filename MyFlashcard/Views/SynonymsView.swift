@@ -28,8 +28,8 @@ struct SynonymsView: View {
                 }
                 .onDelete(perform: deleteItems)
             }
-            .navigationTitle("🔄 Synonyms (\(synonyms.count))")
-            .searchable(text: $searchText, prompt: "Search...")
+            .navigationTitle("🔄 Synonyme (\(synonyms.count))")
+            .searchable(text: $searchText, prompt: "Synonyme suchen …")
             .toolbar {
                 Button(action: { showAddSheet = true }) {
                     Image(systemName: "plus")
@@ -41,9 +41,9 @@ struct SynonymsView: View {
             .overlay {
                 if synonyms.isEmpty {
                     ContentUnavailableView(
-                        "No Synonyms",
+                        "Keine Synonyme vorhanden",
                         systemImage: "arrow.triangle.2.circlepath",
-                        description: Text("Tap + to add synonym entries")
+                        description: Text("Tippe auf +, um Synonyme hinzuzufügen.")
                     )
                 }
             }
@@ -101,7 +101,7 @@ struct SynonymRow: View {
                 Text("🇩🇪 \(synonym.german)")
                     .font(.subheadline)
                 Spacer()
-                Text("🇮🇷 \(synonym.persian)")
+                Text("🇦🇫 \(synonym.persian)")
                     .font(.subheadline)
                     .environment(\.layoutDirection, .rightToLeft)
             }
@@ -150,12 +150,12 @@ struct AddSynonymsSheet: View {
                 VStack(spacing: 20) {
                     // Instructions
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("📝 Add Synonyms")
+                        Text("📝 Synonyme hinzufügen")
                             .font(.headline)
-                        Text("Format: word (synonym1, synonym2)")
+                        Text("Format: Wort (Synonym1, Synonym2)")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        Text("fix (repair, mend)  reparieren  تعمیر کردن  Example...")
+                        Text("fix (repair, mend)  reparieren  تعمیر کردن  Beispielsatz ...")
                             .font(.caption)
                             .padding(8)
                             .background(Color.gray.opacity(0.1))
@@ -178,7 +178,7 @@ struct AddSynonymsSheet: View {
                     // Keyboard dismiss
                     if isTextEditorFocused {
                         Button(action: { isTextEditorFocused = false }) {
-                            Label("Hide Keyboard", systemImage: "keyboard.chevron.compact.down")
+                            Label("Tastatur ausblenden", systemImage: "keyboard.chevron.compact.down")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.bordered)
@@ -190,7 +190,7 @@ struct AddSynonymsSheet: View {
                         isTextEditorFocused = false
                         parseText()
                     }) {
-                        Label("Preview", systemImage: "doc.text.magnifyingglass")
+                        Label("Vorschau", systemImage: "doc.text.magnifyingglass")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
@@ -200,7 +200,7 @@ struct AddSynonymsSheet: View {
                     // Preview
                     if showPreview && !parsedEntries.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Preview (\(parsedEntries.count) entries)")
+                            Text("Vorschau (\(parsedEntries.count) Einträge)")
                                 .font(.headline)
                             
                             ForEach(parsedEntries) { entry in
@@ -210,7 +210,7 @@ struct AddSynonymsSheet: View {
                                             .fontWeight(.semibold)
                                         Text("🇩🇪 \(entry.german)")
                                             .font(.caption)
-                                        Text("🇮🇷 \(entry.persian)")
+                                        Text("🇦🇫 \(entry.persian)")
                                             .font(.caption)
                                     }
                                     Spacer()
@@ -223,7 +223,7 @@ struct AddSynonymsSheet: View {
                             }
                             
                             Button(action: importEntries) {
-                                Label("Import All", systemImage: "square.and.arrow.down")
+                                Label("Alle importieren", systemImage: "square.and.arrow.down")
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.borderedProminent)
@@ -235,18 +235,18 @@ struct AddSynonymsSheet: View {
                 .padding(.vertical)
             }
             .scrollDismissesKeyboard(.interactively)
-            .navigationTitle("Add Synonyms")
+            .navigationTitle("Synonyme hinzufügen")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { isPresented = false }
+                    Button("Abbrechen") { isPresented = false }
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") { isTextEditorFocused = false }
+                    Button("Fertig") { isTextEditorFocused = false }
                 }
             }
-            .alert("✅ Success", isPresented: $showSuccess) {
+            .alert("✅ Erfolgreich", isPresented: $showSuccess) {
                 Button("OK") {
                     bulkText = ""
                     parsedEntries = []
@@ -256,7 +256,7 @@ struct AddSynonymsSheet: View {
             } message: {
                 Text(successMessage)
             }
-            .alert("⚠️ Error", isPresented: $showError) {
+            .alert("⚠️ Fehler", isPresented: $showError) {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(errorMessage)
@@ -273,7 +273,7 @@ struct AddSynonymsSheet: View {
         let validEntries = parsedEntries.filter { $0.isValid }
         
         if validEntries.isEmpty {
-            errorMessage = "No valid entries to import"
+            errorMessage = "Es wurden keine gültigen Einträge zum Import gefunden."
             showError = true
             return
         }
@@ -292,7 +292,7 @@ struct AddSynonymsSheet: View {
         }
         
         try? modelContext.save()
-        successMessage = "Added \(count) synonym entries!"
+        successMessage = "\(count) Synonym-Einträge wurden hinzugefügt."
         showSuccess = true
     }
 }

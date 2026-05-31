@@ -10,15 +10,20 @@ struct QuizView: View {
     @State private var currentIndex = 0
     @State private var correctCount = 0
     @State private var isFinished = false
-    
+
+    private var prioritizedVocabulary: [Vocabulary] {
+        SRSService.normalizeWordAges(for: vocabulary)
+        return vocabulary.sorted { SRSService.reviewPriority(for: $0) > SRSService.reviewPriority(for: $1) }
+    }
+
     var body: some View {
         NavigationStack {
             VStack {
-                if vocabulary.count < 4 {
+                if prioritizedVocabulary.count < 4 {
                     ContentUnavailableView(
-                        "Not Enough Vocabulary",
+                        "Zu wenig Wörter für ein Quiz",
                         systemImage: "questionmark.circle",
-                        description: Text("Add at least 4 words for quiz!")
+                        description: Text("Füge mindestens 4 Wörter hinzu, um ein Quiz zu starten.")
                     )
                 } else if isFinished {
                     QuizResultView(
@@ -27,7 +32,7 @@ struct QuizView: View {
                         onRestart: startNewQuiz
                     )
                 } else if questions.isEmpty {
-                    Button("Start Quiz") {
+                    Button("Quiz starten") {
                         startNewQuiz()
                     }
                     .buttonStyle(.borderedProminent)
@@ -35,12 +40,16 @@ struct QuizView: View {
                     // Progress
                     ProgressView(value: Double(currentIndex + 1), total: Double(questions.count))
                         .padding(.horizontal)
-                    
+
+                    Text("Unbekannte Wörter werden bevorzugt wiederholt.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
                     HStack {
                         Text("✅ \(correctCount)")
                             .foregroundColor(.green)
                         Spacer()
-                        Text("Question \(currentIndex + 1)/\(questions.count)")
+                        Text("Frage \(currentIndex + 1) / \(questions.count)")
                         Spacer()
                         Text("❌ \(currentIndex - correctCount)")
                             .foregroundColor(.red)
@@ -72,7 +81,7 @@ struct QuizView: View {
     }
     
     private func generateQuestions() -> [QuizQuestion] {
-        let shuffled = vocabulary.shuffled()
+        let shuffled = prioritizedVocabulary
         var result: [QuizQuestion] = []
         
         for vocab in shuffled.prefix(10) {
@@ -121,14 +130,11 @@ struct QuizView: View {
         questions[currentIndex].isCorrect = isCorrect
         
         let vocab = questions[currentIndex].vocabulary
-        vocab.timesReviewed += 1
         if isCorrect {
-            vocab.timesCorrect += 1
             correctCount += 1
         }
-        vocab.lastReviewedAt = Date()
-        vocab.isLearned = vocab.timesCorrect >= 3
-        
+        SRSService.applyReview(to: vocab, quality: isCorrect ? .perfect : .incorrect_hard)
+
         try? modelContext.save()
     }
     
@@ -169,7 +175,7 @@ struct QuizQuestionView: View {
                     Button(action: {
                         speechService.speak(question.vocabulary.englishWord)
                     }) {
-                        Label("Hear it", systemImage: "speaker.wave.2.fill")
+                        Label("Anhören", systemImage: "speaker.wave.2.fill")
                     }
                     .buttonStyle(.borderedProminent)
                 }
@@ -219,7 +225,7 @@ struct QuizQuestionView: View {
             
             if hasAnswered {
                 Button(action: onNext) {
-                    Label("Next", systemImage: "arrow.right")
+                    Label("Weiter", systemImage: "arrow.right")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -261,11 +267,11 @@ struct QuizResultView: View {
             Text(emoji)
                 .font(.system(size: 80))
             
-            Text(percentage >= 70 ? "Great Job!" : "Keep Practicing!")
+            Text(percentage >= 70 ? "Stark gemacht!" : "Weiter so – Übung lohnt sich!")
                 .font(.title)
                 .fontWeight(.bold)
             
-            Text("\(correct) out of \(total) correct")
+            Text("\(correct) von \(total) richtig")
                 .font(.title2)
             
             Text("\(percentage)%")
@@ -274,7 +280,7 @@ struct QuizResultView: View {
                 .foregroundColor(.blue)
             
             Button(action: onRestart) {
-                Label("Try Again", systemImage: "arrow.clockwise")
+                Label("Noch einmal", systemImage: "arrow.clockwise")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)

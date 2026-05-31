@@ -7,34 +7,83 @@ struct BrowseView: View {
     @StateObject private var speechService = SpeechService.shared
     
     @State private var searchText = ""
-    
+    @State private var selectedStatus: WordStatus? = nil
+    @State private var showDictionary = false
+
+    private var normalizedVocabulary: [Vocabulary] {
+        SRSService.normalizeWordAges(for: vocabulary)
+        return vocabulary
+    }
+
+    private var statusCounts: [WordStatus: Int] {
+        Dictionary(uniqueKeysWithValues: WordStatus.allCases.map { status in
+            (status, normalizedVocabulary.filter { LearningStatusHelper.normalizedStatus(for: $0) == status }.count)
+        })
+    }
+
     var filteredVocabulary: [Vocabulary] {
-        if searchText.isEmpty {
-            return vocabulary
+        normalizedVocabulary.filter { vocab in
+            let matchesSearch = searchText.isEmpty ||
+                vocab.englishWord.localizedCaseInsensitiveContains(searchText) ||
+                vocab.german.localizedCaseInsensitiveContains(searchText) ||
+                vocab.persian.contains(searchText) ||
+                vocab.exampleSentence.localizedCaseInsensitiveContains(searchText)
+            let matchesStatus = selectedStatus == nil || LearningStatusHelper.normalizedStatus(for: vocab) == selectedStatus
+            return matchesSearch && matchesStatus
         }
-        return vocabulary.filter {
-            $0.englishWord.localizedCaseInsensitiveContains(searchText) ||
-            $0.german.localizedCaseInsensitiveContains(searchText) ||
-            $0.persian.contains(searchText)
-        }
+        .sorted { SRSService.reviewPriority(for: $0) > SRSService.reviewPriority(for: $1) }
     }
     
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(filteredVocabulary) { vocab in
-                    VocabularyRow(vocab: vocab, speechService: speechService)
+            VStack(spacing: 0) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        StatusChip(title: "Alle", count: normalizedVocabulary.count, isSelected: selectedStatus == nil) {
+                            selectedStatus = nil
+                        }
+                        ForEach(WordStatus.allCases, id: \.self) { status in
+                            StatusChip(title: status.title, count: statusCounts[status] ?? 0, isSelected: selectedStatus == status) {
+                                selectedStatus = status
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 8)
                 }
-                .onDelete(perform: deleteItems)
+
+                List {
+                    ForEach(filteredVocabulary) { vocab in
+                        VocabularyRow(vocab: vocab, speechService: speechService)
+                    }
+                    .onDelete(perform: deleteItems)
+                }
+             }
+            .navigationTitle("📚 Wortschatz (\(normalizedVocabulary.count))")
+            .searchable(text: $searchText, prompt: "Wörter suchen …")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink(
+                        destination: DictionaryDetailView(),
+                        label: {
+                            Image(systemName: "book.fill")
+                                .foregroundColor(.blue)
+                        }
+                    )
+                }
             }
-            .navigationTitle("📚 Vocabulary (\(vocabulary.count))")
-            .searchable(text: $searchText, prompt: "Search...")
             .overlay {
-                if vocabulary.isEmpty {
+                if normalizedVocabulary.isEmpty {
                     ContentUnavailableView(
-                        "No Vocabulary",
+                        "Noch keine Wörter vorhanden",
                         systemImage: "book.closed",
-                        description: Text("Add some words to get started!")
+                        description: Text("Füge die ersten Wörter hinzu, um mit dem Lernen zu beginnen.")
+                    )
+                } else if filteredVocabulary.isEmpty {
+                    ContentUnavailableView(
+                        "Keine passenden Wörter gefunden",
+                        systemImage: "line.3.horizontal.decrease.circle",
+                        description: Text("Passe Suche oder Filter an, um andere Wörter anzuzeigen.")
                     )
                 }
             }
@@ -52,7 +101,9 @@ struct VocabularyRow: View {
     let vocab: Vocabulary
     @ObservedObject var speechService: SpeechService
     @State private var isExpanded = false
-    
+
+    private var status: WordStatus { LearningStatusHelper.normalizedStatus(for: vocab) }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Header with English word and speaker button
@@ -70,6 +121,14 @@ struct VocabularyRow: View {
                 }
                 .buttonStyle(.borderless) // Important: prevents row tap interference
                 
+                Label(status.title, systemImage: statusIcon)
+                    .font(.caption)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(statusColor.opacity(0.12))
+                    .foregroundColor(statusColor)
+                    .clipShape(Capsule())
+
                 Spacer()
                 
                 // Expand/collapse indicator
@@ -87,7 +146,7 @@ struct VocabularyRow: View {
                 Text("🇩🇪 \(vocab.german)")
                     .font(.subheadline)
                 Spacer()
-                Text("🇮🇷 \(vocab.persian)")
+                Text("🇦🇫 \(vocab.persian)")
                     .font(.subheadline)
                     .environment(\.layoutDirection, .rightToLeft)
             }
@@ -116,12 +175,50 @@ struct VocabularyRow: View {
                     HStack {
                         Image(systemName: vocab.isLearned ? "checkmark.circle.fill" : "clock")
                             .foregroundColor(vocab.isLearned ? .green : .orange)
-                        Text("Reviewed: \(vocab.timesReviewed)x | Correct: \(vocab.timesCorrect)x")
+                        Text("Wiederholt: \(vocab.timesReviewed)x • Richtig: \(vocab.timesCorrect)x")
                             .font(.caption2)
                     }
                 }
             }
         }
         .padding(.vertical, 4)
+    }
+
+    private var statusIcon: String {
+        switch status {
+        case .newWord: return "sparkles"
+        case .oldWord: return "clock.arrow.circlepath"
+        case .knownWord: return "checkmark.seal.fill"
+        case .unknownWord: return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var statusColor: Color {
+        switch status {
+        case .newWord: return .blue
+        case .oldWord: return .purple
+        case .knownWord: return .green
+        case .unknownWord: return .red
+        }
+    }
+}
+
+private struct StatusChip: View {
+    let title: String
+    let count: Int
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text("\(title) (\(count))")
+                .font(.caption)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(isSelected ? Color.accentColor.opacity(0.16) : Color.gray.opacity(0.12))
+                .foregroundColor(isSelected ? .accentColor : .primary)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }

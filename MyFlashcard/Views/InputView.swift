@@ -20,9 +20,9 @@ struct InputView: View {
                 VStack(spacing: 20) {
                     // Instructions
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("📝 Bulk Import")
+                        Text("📝 Mehrere Wörter importieren")
                             .font(.headline)
-                        Text("Paste vocabulary table with format:")
+                        Text("Füge eine Vokabelliste in diesem Format ein:")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         Text("English  German  Persian  Example")
@@ -51,7 +51,7 @@ struct InputView: View {
                         Button(action: {
                             isTextEditorFocused = false
                         }) {
-                            Label("Hide Keyboard", systemImage: "keyboard.chevron.compact.down")
+                            Label("Tastatur ausblenden", systemImage: "keyboard.chevron.compact.down")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.bordered)
@@ -63,7 +63,7 @@ struct InputView: View {
                         isTextEditorFocused = false // Dismiss keyboard
                         parseText()
                     }) {
-                        Label("Preview Import", systemImage: "doc.text.magnifyingglass")
+                        Label("Importvorschau anzeigen", systemImage: "doc.text.magnifyingglass")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
@@ -73,7 +73,7 @@ struct InputView: View {
                     // Preview
                     if showPreview && !parsedEntries.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Preview (\(parsedEntries.count) entries)")
+                            Text("Vorschau (\(parsedEntries.count) Einträge)")
                                 .font(.headline)
                             
                             ForEach(parsedEntries) { entry in
@@ -92,7 +92,7 @@ struct InputView: View {
                                         }
                                         Text("🇩🇪 \(entry.german)")
                                             .font(.caption)
-                                        Text("🇮🇷 \(entry.persian)")
+                                        Text("🇦🇫 \(entry.persian)")
                                             .font(.caption)
                                             .environment(\.layoutDirection, .rightToLeft)
                                     }
@@ -111,7 +111,7 @@ struct InputView: View {
                             }
                             
                             Button(action: importEntries) {
-                                Label("Import All", systemImage: "square.and.arrow.down")
+                                Label("Alle importieren", systemImage: "square.and.arrow.down")
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.borderedProminent)
@@ -123,17 +123,17 @@ struct InputView: View {
                 .padding(.vertical)
             }
             .scrollDismissesKeyboard(.interactively) // Dismiss keyboard on scroll
-            .navigationTitle("➕ Add Vocabulary")
+            .navigationTitle("➕ Wörter hinzufügen")
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") {
+                    Button("Fertig") {
                         isTextEditorFocused = false
                     }
                 }
             }
-            .alert("✅ Success", isPresented: $showSuccess) {
-                Button("OK") { 
+            .alert("✅ Import erfolgreich", isPresented: $showSuccess) {
+                Button("OK") {
                     bulkText = ""
                     parsedEntries = []
                     showPreview = false
@@ -141,7 +141,7 @@ struct InputView: View {
             } message: {
                 Text(successMessage)
             }
-            .alert("⚠️ Duplicates Found", isPresented: $showError) {
+            .alert("⚠️ Doppelte Einträge gefunden", isPresented: $showError) {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(errorMessage)
@@ -159,7 +159,7 @@ struct InputView: View {
         
         // Check if all are duplicates
         if validEntries.isEmpty {
-            errorMessage = "No valid entries to import"
+            errorMessage = "Es wurden keine gültigen Einträge zum Import gefunden."
             showError = true
             return
         }
@@ -171,14 +171,14 @@ struct InputView: View {
         
         // Show results
         if result.successCount > 0 {
-            successMessage = "Added \(result.successCount) vocabulary entries!"
+            successMessage = "\(result.successCount) Wörter wurden erfolgreich importiert."
             if result.hasDuplicates {
-                successMessage += "\n\nSkipped \(result.duplicates.count) duplicates."
+                successMessage += "\n\n\(result.duplicates.count) doppelte Einträge wurden übersprungen."
             }
             showSuccess = true
         } else if result.hasDuplicates {
             // All were duplicates - show error only
-            errorMessage = "All entries are duplicates:\n\(result.duplicates.joined(separator: ", "))"
+            errorMessage = "Alle Einträge sind bereits vorhanden:\n\(result.duplicates.joined(separator: ", "))"
             showError = true
         }
     }

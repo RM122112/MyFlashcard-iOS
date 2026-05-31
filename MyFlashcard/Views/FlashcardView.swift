@@ -15,15 +15,19 @@ struct FlashcardView: View {
             VStack {
                 if cards.isEmpty {
                     ContentUnavailableView(
-                        "No Flashcards",
+                        "Keine Karteikarten vorhanden",
                         systemImage: "rectangle.stack",
-                        description: Text("Add vocabulary to practice!")
+                        description: Text("Füge Wörter hinzu, um mit dem Üben zu beginnen.")
                     )
                 } else {
                     // Progress
                     ProgressView(value: Double(currentIndex + 1), total: Double(cards.count))
                         .padding(.horizontal)
-                    
+
+                    Text("Unbekannte und schwierige Wörter werden zuerst angezeigt.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
                     Text("\(currentIndex + 1) / \(cards.count)")
                         .font(.caption)
                     
@@ -38,12 +42,12 @@ struct FlashcardView: View {
                     // Navigation
                     HStack(spacing: 20) {
                         Button(action: previousCard) {
-                            Label("Previous", systemImage: "arrow.left")
+                            Label("Zurück", systemImage: "arrow.left")
                         }
                         .disabled(currentIndex == 0)
                         
                         Button(action: nextCard) {
-                            Label("Next", systemImage: "arrow.right")
+                            Label("Weiter", systemImage: "arrow.right")
                         }
                         .disabled(currentIndex >= cards.count - 1)
                     }
@@ -52,14 +56,14 @@ struct FlashcardView: View {
                     // Learning Buttons
                     HStack(spacing: 20) {
                         Button(action: { markAsLearned(false) }) {
-                            Label("Don't Know", systemImage: "xmark")
+                            Label("Unbekannt", systemImage: "xmark")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.red)
                         
                         Button(action: { markAsLearned(true) }) {
-                            Label("Know It!", systemImage: "checkmark")
+                            Label("Bekannt", systemImage: "checkmark")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.borderedProminent)
@@ -68,7 +72,7 @@ struct FlashcardView: View {
                     .padding(.horizontal)
                 }
             }
-            .navigationTitle("🎴 Flashcards")
+            .navigationTitle("🎴 Karteikarten")
             .toolbar {
                 Button(action: shuffleCards) {
                     Image(systemName: "shuffle")
@@ -79,13 +83,14 @@ struct FlashcardView: View {
     }
     
     private func loadCards() {
-        cards = vocabulary.shuffled()
+        SRSService.normalizeWordAges(for: vocabulary)
+        cards = vocabulary.sorted { SRSService.reviewPriority(for: $0) > SRSService.reviewPriority(for: $1) }
         currentIndex = 0
         showingBack = false
     }
     
     private func shuffleCards() {
-        cards.shuffle()
+        cards = cards.shuffled().sorted { SRSService.reviewPriority(for: $0) > SRSService.reviewPriority(for: $1) }
         currentIndex = 0
         showingBack = false
     }
@@ -106,13 +111,8 @@ struct FlashcardView: View {
     
     private func markAsLearned(_ correct: Bool) {
         let card = cards[currentIndex]
-        card.timesReviewed += 1
-        if correct {
-            card.timesCorrect += 1
-        }
-        card.lastReviewedAt = Date()
-        card.isLearned = card.timesCorrect >= 3
-        
+        SRSService.applyReview(to: card, quality: correct ? .perfect : .incorrect_hard)
+
         try? modelContext.save()
         nextCard()
     }
@@ -149,7 +149,7 @@ struct SimpleFlashcard: View {
                     
                     // Persian with RTL
                     HStack {
-                        Text("🇮🇷")
+                        Text("🇦🇫")
                             .font(.title)
                         Text(card.persian)
                             .font(.title2)
@@ -163,7 +163,7 @@ struct SimpleFlashcard: View {
                             .padding(.horizontal, 40)
                         
                         VStack(spacing: 8) {
-                            Text("📝 Example:")
+                            Text("📝 Beispielsatz:")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             
@@ -186,7 +186,7 @@ struct SimpleFlashcard: View {
                     
                     Spacer().frame(height: 20)
                     
-                    Text("Tap to see English word")
+                    Text("Tippe, um das englische Wort zu sehen")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -196,31 +196,31 @@ struct SimpleFlashcard: View {
                 VStack(spacing: 20) {
                     Text("🇺🇸")
                         .font(.system(size: 50))
-                    
+
                     Text(card.englishWord)
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
-                    
+
                     HStack(spacing: 12) {
                         Button {
                             speechService.speak(card.englishWord)
                         } label: {
-                            Label("Play", systemImage: "speaker.wave.2.fill")
+                            Label("Abspielen", systemImage: "speaker.wave.2.fill")
                         }
                         .buttonStyle(.borderedProminent)
-                        
+
                         Button {
                             speechService.speakSlow(card.englishWord)
                         } label: {
-                            Label("Slow", systemImage: "tortoise.fill")
+                            Label("Langsam", systemImage: "tortoise.fill")
                         }
                         .buttonStyle(.bordered)
                     }
-                    
+
                     Spacer().frame(height: 20)
-                    
-                    Text("Tap to reveal translation")
+
+                    Text("Tippe, um die Übersetzung zu sehen")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

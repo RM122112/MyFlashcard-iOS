@@ -29,6 +29,7 @@
 		020 /* ClozeQuizView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120 /* ClozeQuizView.swift */; };
 		021 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 121 /* StatsView.swift */; };
 		022 /* QuizHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122 /* QuizHubView.swift */; };
+			023 /* DictionaryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 123 /* DictionaryDetailView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,6 +56,7 @@
 		120 /* ClozeQuizView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClozeQuizView.swift; sourceTree = "<group>"; };
 		121 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		122 /* QuizHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizHubView.swift; sourceTree = "<group>"; };
+			123 /* DictionaryDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryDetailView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -121,6 +123,7 @@
 				120 /* ClozeQuizView.swift */,
 				121 /* StatsView.swift */,
 				122 /* QuizHubView.swift */,
+							123 /* DictionaryDetailView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -235,6 +238,7 @@
 				020 /* ClozeQuizView.swift in Sources */,
 				021 /* StatsView.swift in Sources */,
 				022 /* QuizHubView.swift in Sources */,
+							023 /* DictionaryDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

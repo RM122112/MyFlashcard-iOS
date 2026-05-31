@@ -27,7 +27,7 @@ struct DictationView: View {
     var body: some View {
         VStack(spacing: 20) {
             if vocabulary.isEmpty {
-                ContentUnavailableView("No Words", systemImage: "waveform", description: Text("Add vocabulary first!"))
+                ContentUnavailableView("Keine Wörter vorhanden", systemImage: "waveform", description: Text("Füge zuerst Wörter hinzu."))
             } else if isFinished {
                 dictationResultView
             } else if cards.isEmpty {
@@ -45,12 +45,12 @@ struct DictationView: View {
             Image(systemName: "waveform.circle.fill")
                 .font(.system(size: 70))
                 .foregroundColor(.blue)
-            Text("Dictation Mode")
+            Text("Diktatmodus")
                 .font(.title).bold()
-            Text("Listen to the word and type what you hear")
+            Text("Höre das Wort und tippe ein, was du verstehst")
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
-            Button("Start Dictation") {
+            Button("Diktat starten") {
                 cards = Array(vocabulary.shuffled().prefix(10))
                 currentIndex = 0
                 correctCount = 0
@@ -78,7 +78,7 @@ struct DictationView: View {
 
             // Speaker Buttons
             VStack(spacing: 12) {
-                Text("🎧 Listen and type what you hear")
+                Text("🎧 Höre zu und tippe das gehörte Wort ein")
                     .font(.headline)
                     .foregroundColor(.secondary)
 
@@ -87,13 +87,13 @@ struct DictationView: View {
                         speech.speak(card.englishWord)
                         hasPlayed = true
                     }) {
-                        Label("Play", systemImage: "speaker.wave.2.fill")
+                        Label("Abspielen", systemImage: "speaker.wave.2.fill")
                             .frame(minWidth: 120)
                     }
                     .buttonStyle(.borderedProminent)
 
                     Button(action: { speech.speakSlow(card.englishWord) }) {
-                        Label("Slow", systemImage: "tortoise.fill")
+                        Label("Langsam", systemImage: "tortoise.fill")
                             .frame(minWidth: 120)
                     }
                     .buttonStyle(.bordered)
@@ -113,10 +113,10 @@ struct DictationView: View {
 
             // Input Field
             VStack(alignment: .leading, spacing: 6) {
-                Text("Your answer:")
+                Text("Deine Antwort:")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                TextField("Type the English word...", text: $userInput)
+                TextField("Tippe das englische Wort ein ...", text: $userInput)
                     .textFieldStyle(.roundedBorder)
                     .font(.title2)
                     .autocorrectionDisabled()
@@ -128,7 +128,7 @@ struct DictationView: View {
                     HStack {
                         Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
                             .foregroundColor(isCorrect ? .green : .red)
-                        Text(isCorrect ? "Correct! 🎉" : "Correct answer: \(card.englishWord)")
+                        Text(isCorrect ? "Richtig! 🎉" : "Richtige Antwort: \(card.englishWord)")
                             .foregroundColor(isCorrect ? .green : .red)
                     }
                     .font(.subheadline)
@@ -137,14 +137,14 @@ struct DictationView: View {
 
             if !showResult {
                 Button(action: { checkAnswer(card) }) {
-                    Label("Check", systemImage: "checkmark")
+                    Label("Prüfen", systemImage: "checkmark")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(userInput.trimmingCharacters(in: .whitespaces).isEmpty || !hasPlayed)
             } else {
                 Button(action: nextCard) {
-                    Label("Next", systemImage: "arrow.right")
+                    Label("Weiter", systemImage: "arrow.right")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -170,14 +170,14 @@ struct DictationView: View {
         VStack(spacing: 20) {
             Text(correctCount == cards.count ? "🏆" : correctCount > cards.count / 2 ? "🎉" : "📚")
                 .font(.system(size: 80))
-            Text("Dictation Complete!")
+            Text("Diktat abgeschlossen!")
                 .font(.title).bold()
-            Text("\(correctCount) / \(cards.count) correct")
+            Text("\(correctCount) / \(cards.count) richtig")
                 .font(.title2)
             Text("\(Int(Double(correctCount) / Double(cards.count) * 100))%")
                 .font(.system(size: 60, weight: .bold))
                 .foregroundColor(.blue)
-            Button("Try Again") {
+            Button("Noch einmal") {
                 cards = Array(vocabulary.shuffled().prefix(10))
                 currentIndex = 0
                 correctCount = 0
