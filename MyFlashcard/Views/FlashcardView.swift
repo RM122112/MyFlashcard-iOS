@@ -202,6 +202,17 @@ struct SimpleFlashcard: View {
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
 
+                    if !card.ipaPronunciation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text("/\(card.ipaPronunciation)/")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Aussprachehilfe: \(speechService.pronunciationHint(for: card.englishWord))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+
                     HStack(spacing: 12) {
                         Button {
                             speechService.speak(card.englishWord)
@@ -228,7 +239,7 @@ struct SimpleFlashcard: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 400)
+        .frame(height: 440)
         .onTapGesture {
             withAnimation(.easeInOut(duration: 0.3)) {
                 showingBack.toggle()

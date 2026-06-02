@@ -43,7 +43,23 @@ class SpeechService: NSObject, ObservableObject, @preconcurrency AVSpeechSynthes
     func speakSlow(_ text: String) {
         speak(text, rate: 0.3)
     }
-    
+
+    /// Lightweight pronunciation hint for learners when IPA is missing.
+    func pronunciationHint(for text: String) -> String {
+        let normalized = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return "" }
+
+        var hint = normalized
+            .replacingOccurrences(of: "tion", with: "shun")
+            .replacingOccurrences(of: "ough", with: "off/oh/uh")
+            .replacingOccurrences(of: "th", with: "th")
+            .replacingOccurrences(of: "ph", with: "f")
+            .replacingOccurrences(of: "qu", with: "kw")
+
+        hint = hint.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+        return hint
+    }
+
     func stop() {
         synthesizer.stopSpeaking(at: .immediate)
     }

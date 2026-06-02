@@ -95,6 +95,15 @@ struct SRSReviewView: View {
                         VStack(spacing: 12) {
                             Text(card.englishWord)
                                 .font(.system(size: 36, weight: .bold))
+                            if !card.ipaPronunciation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                Text("/\(card.ipaPronunciation)/")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            } else {
+                                Text("Aussprachehilfe: \(speech.pronunciationHint(for: card.englishWord))")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                             if !card.cefrLevel.isEmpty {
                                 Text(card.cefrLevel)
                                     .font(.caption)
@@ -103,11 +112,19 @@ struct SRSReviewView: View {
                                     .background(Color.blue.opacity(0.2))
                                     .cornerRadius(8)
                             }
-                            Button(action: { speech.speak(card.englishWord) }) {
-                                Label("Anhören", systemImage: "speaker.wave.2.fill")
-                                    .font(.callout)
+                            HStack(spacing: 8) {
+                                Button(action: { speech.speak(card.englishWord) }) {
+                                    Label("Anhören", systemImage: "speaker.wave.2.fill")
+                                        .font(.callout)
+                                }
+                                .buttonStyle(.bordered)
+
+                                Button(action: { speech.speakSlow(card.englishWord) }) {
+                                    Label("Langsam", systemImage: "tortoise.fill")
+                                        .font(.callout)
+                                }
+                                .buttonStyle(.bordered)
                             }
-                            .buttonStyle(.bordered)
                             Text(SRSService.difficultyLabel(easeFactor: card.srsEaseFactor))
                                 .font(.caption)
                                 .foregroundColor(.secondary)

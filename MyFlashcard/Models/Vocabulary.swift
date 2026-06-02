@@ -40,12 +40,14 @@ enum LearningStatusHelper {
 
     static func reviewPriority(for vocabulary: Vocabulary, now: Date = Date()) -> Int {
         let status = normalizedStatus(for: vocabulary, now: now)
-        let dueBoost = (vocabulary.srsNextReview == nil || vocabulary.srsNextReview! <= now) ? 10 : 0
+        let dueBoost = (vocabulary.srsNextReview == nil || vocabulary.srsNextReview! <= now) ? 12 : 0
         let weaknessBoost = max(vocabulary.timesReviewed - vocabulary.timesCorrect, 0)
+        let recentFailuresBoost = vocabulary.failedReviewCount * 2
+        let consecutiveFailureBoost = vocabulary.consecutiveFailures * 4
         switch status {
-        case .unknownWord: return 100 + dueBoost + weaknessBoost
-        case .oldWord: return 70 + dueBoost + weaknessBoost
-        case .newWord: return 55 + dueBoost + weaknessBoost
+        case .unknownWord: return 100 + dueBoost + weaknessBoost + recentFailuresBoost + consecutiveFailureBoost
+        case .oldWord: return 70 + dueBoost + weaknessBoost + recentFailuresBoost + consecutiveFailureBoost
+        case .newWord: return 55 + dueBoost + weaknessBoost + recentFailuresBoost
         case .knownWord: return 25 + dueBoost
         }
     }
@@ -67,6 +69,11 @@ final class Vocabulary {
     var wordStatus: String = WordStatus.newWord.rawValue
     var lastQuizCorrect: Bool?
     var lastStatusChangedAt: Date?
+    var failedReviewCount: Int = 0
+    var consecutiveFailures: Int = 0
+    var lastFailedAt: Date?
+    var recentFailureDates: String = ""
+    var ipaPronunciation: String = ""
 
     // SRS (SM-2) fields
     var srsInterval: Int = 1        // days until next review
@@ -95,7 +102,12 @@ final class Vocabulary {
         contextSentences: String = "",
         wordStatus: WordStatus = .newWord,
         lastQuizCorrect: Bool? = nil,
-        lastStatusChangedAt: Date? = nil
+        lastStatusChangedAt: Date? = nil,
+        failedReviewCount: Int = 0,
+        consecutiveFailures: Int = 0,
+        lastFailedAt: Date? = nil,
+        recentFailureDates: String = "",
+        ipaPronunciation: String = ""
     ) {
         self.id = UUID()
         self.englishWord = englishWord
@@ -110,6 +122,11 @@ final class Vocabulary {
         self.wordStatus = wordStatus.rawValue
         self.lastQuizCorrect = lastQuizCorrect
         self.lastStatusChangedAt = lastStatusChangedAt
+        self.failedReviewCount = failedReviewCount
+        self.consecutiveFailures = consecutiveFailures
+        self.lastFailedAt = lastFailedAt
+        self.recentFailureDates = recentFailureDates
+        self.ipaPronunciation = ipaPronunciation
         self.srsInterval = 1
         self.srsEaseFactor = 2.5
         self.srsRepetitions = 0
@@ -138,6 +155,14 @@ final class Vocabulary {
     /// Context sentence list
     var contextSentenceList: [String] {
         contextSentences.split(separator: ";").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    }
+
+    /// ISO-8601 encoded failure dates (kept small for lightweight analytics)
+    var recentFailureDateList: [Date] {
+        let parser = ISO8601DateFormatter()
+        return recentFailureDates
+            .split(separator: ",")
+            .compactMap { parser.date(from: String($0)) }
     }
 }
 
@@ -417,6 +442,9 @@ struct TextAnalysisResult {
     let characterCount: Int
     let detectedLanguage: String
     let grammarIssues: [GrammarIssue]
+    let cefrEstimate: String
+    let weaknessAreas: [String]
+    let recommendedExercises: [String]
 }
 /// Grammar Issue found in text
 struct GrammarIssue: Identifiable {

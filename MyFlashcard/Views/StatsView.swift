@@ -9,8 +9,13 @@ struct StatsView: View {
     @AppStorage("currentStreak") private var currentStreak = 0
     @AppStorage("lastStudyDate") private var lastStudyDateStr = ""
     @AppStorage("todayReviewedCount") private var todayReviewedCount = 0
+    @AppStorage("totalXP") private var totalXP = 0
 
     private var calendar: Calendar { Calendar.current }
+
+    private var weekReviewedCount: Int {
+        weeklyData.map(\.count).reduce(0, +)
+    }
 
     // MARK: - Computed Stats
     private var learnedCount: Int { vocabulary.filter { $0.isLearned }.count }
@@ -21,7 +26,13 @@ struct StatsView: View {
     }
 
     private var statusCounts: [WordStatus: Int] {
-        SRSService.normalizeWordAges(for: vocabulary)
+        // Normalize word ages without mutation in computed property
+        for vocab in vocabulary {
+            let normalized = LearningStatusHelper.normalizedStatus(for: vocab)
+            if normalized != vocab.wordStatusValue {
+                vocab.wordStatusValue = normalized
+            }
+        }
         return Dictionary(uniqueKeysWithValues: WordStatus.allCases.map { status in
             (status, vocabulary.filter { LearningStatusHelper.normalizedStatus(for: $0) == status }.count)
         })
@@ -83,6 +94,9 @@ struct StatsView: View {
                     // Weekly Chart
                     weeklyChartSection
 
+                    // XP & Weekly Goal
+                    xpSection
+
                     // Weak Words
                     weakWordsSection
 
@@ -95,6 +109,7 @@ struct StatsView: View {
                 .padding()
             }
             .navigationTitle("📊 Lernstatistiken")
+            .onAppear { syncDailyReviewCounter() }
         }
     }
 
@@ -104,7 +119,7 @@ struct StatsView: View {
             statCard(title: "Gesamt", value: "\(totalCount)", icon: "textformat.abc", color: .blue)
             statCard(title: "Bekannt", value: "\(learnedCount)", icon: "checkmark.seal.fill", color: .green)
             statCard(title: "Heute fällig", value: "\(dueCount)", icon: "calendar.badge.clock", color: .orange)
-            statCard(title: "Heute wiederholt", value: "\(todayReviewedCount)", icon: "brain.head.profile", color: .purple)
+            statCard(title: "XP", value: "\(totalXP)", icon: "star.fill", color: .purple)
         }
     }
 
@@ -200,6 +215,40 @@ struct StatsView: View {
             }
             .font(.caption)
             .foregroundColor(.secondary)
+        }
+    }
+
+    private var xpSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("⭐ Lernfortschritt")
+                .font(.headline)
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("Heute wiederholt")
+                    Spacer()
+                    Text("\(todayReviewedCount)")
+                        .fontWeight(.semibold)
+                }
+
+                HStack {
+                    Text("Diese Woche")
+                    Spacer()
+                    Text("\(weekReviewedCount) Karten")
+                        .fontWeight(.semibold)
+                }
+
+                let weeklyGoal = dailyGoal * 7
+                ProgressView(value: Double(min(weekReviewedCount, weeklyGoal)), total: Double(max(weeklyGoal, 1)))
+                    .tint(.purple)
+
+                Text("Wochenziel: \(weekReviewedCount) / \(weeklyGoal)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(Color(.secondarySystemBackground))
+            .cornerRadius(16)
         }
     }
 
@@ -318,6 +367,15 @@ struct StatsView: View {
             guard count > 0 else { return nil }
             let f = DateFormatter(); f.dateFormat = offset == 0 ? "'Heute'" : "EEE"
             return LabeledCount(label: f.string(from: day), count: count)
+        }
+    }
+
+    private func syncDailyReviewCounter() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let today = formatter.string(from: calendar.startOfDay(for: Date()))
+        if lastStudyDateStr != today {
+            todayReviewedCount = 0
         }
     }
 }

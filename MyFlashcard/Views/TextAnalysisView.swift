@@ -66,6 +66,7 @@ private final class AIIntentRouter {
         try! NSRegularExpression(pattern: "(?i)(.+?)\\s+auf englisch sagen\\??\\s*$"),
         try! NSRegularExpression(pattern: "(?i)translate\\s+(.+?)\\s+to english\\??\\s*$"),
         try! NSRegularExpression(pattern: "(?i)how do you say\\s+(.+?)\\s+in english\\??\\s*$"),
+        try! NSRegularExpression(pattern: "(?i)how can i say\\s+(.+?)(?:\\s+in english)?\\??\\s*$"),
         try! NSRegularExpression(pattern: "(?i)übersetze\\s+(.+?)\\s+ins englische\\??\\s*$"),
         try! NSRegularExpression(pattern: "(?i)(.+?)\\s+wie kann ich (?:es|das|diesen satz)?\\s*auf englisch sagen\\??\\s*$")
     ]
@@ -479,6 +480,19 @@ private struct AIRepositoryResult {
     let mode: AIChatMode
     let recommendedTopics: [String]
     let dictionaryLookup: DictionaryLookup?
+    let inferencePath: AIInferencePath
+}
+
+private enum AIInferencePath {
+    case onDevice
+    case proxy
+
+    var label: String {
+        switch self {
+        case .onDevice: return "On-device"
+        case .proxy: return "Proxy-Fallback"
+        }
+    }
 }
 
 private final class AIConversationMemory {
@@ -528,6 +542,7 @@ private final class GrammarTopicRecommender {
 
 private final class OfflineAIEngine {
     private let analysisService = TextAnalysisService.shared
+    private let recommender = GrammarTopicRecommender()
 
     func generateResponse(input: String, mode: AIChatMode, directTranslationOnly: Bool, dictionaryLookup: DictionaryLookup?) -> String {
         switch mode {
@@ -537,16 +552,75 @@ private final class OfflineAIEngine {
             return grammarResponse(input)
         case .analyze:
             let result = analysisService.analyzeText(input)
-            return "Wörter: \(result.wordCount)\nSätze: \(result.sentences)\nAuffälligkeiten: \(result.grammarIssues.count)\n\nTipp: Variiere Satzanfänge und halte die Zeitform konsistent."
+            let weaknessBlock = result.weaknessAreas.isEmpty ? "Keine klaren Schwachstellen erkannt." : result.weaknessAreas.joined(separator: "\n- ")
+            let exerciseBlock = result.recommendedExercises.prefix(2).joined(separator: "\n- ")
+            return "Wörter: \(result.wordCount)\nSätze: \(result.sentences)\nAuffälligkeiten: \(result.grammarIssues.count)\nCEFR (Schätzung): \(result.cefrEstimate)\n\nSchwächen:\n- \(weaknessBlock)\n\nAktive Übung:\n- \(exerciseBlock)"
         case .improve:
-            return "Verbesserter Entwurf:\n\n\(input)\n\n- Verwende präzisere Verben\n- Entferne unnötige Füllwörter\n- Bevorzuge kürzere, klarere Sätze"
+            let analysis = analysisService.analyzeText(input)
+            let taskHint = analysis.recommendedExercises.first ?? "Überarbeite den Text mit Fokus auf klare Satzstruktur."
+            return "Verbesserter Entwurf:\n\n\(input)\n\n- Verwende präzisere Verben\n- Entferne unnötige Füllwörter\n- Bevorzuge kürzere, klarere Sätze\n- Nächster Lernschritt: \(taskHint)"
         case .professional:
             return "Professionelle Version:\n\nThank you for your message. I would appreciate your feedback by tomorrow."
         case .vocabulary:
             return vocabularyResponse(for: input, dictionaryLookup: dictionaryLookup)
         case .chat:
-            return "Ich helfe dir bei Grammatik, Textverbesserung, Analyse, Übersetzung und Wortschatztraining."
+            return chatResponse(input, dictionaryLookup: dictionaryLookup)
         }
+    }
+
+    private func chatResponse(_ input: String, dictionaryLookup: DictionaryLookup?) -> String {
+        if let payload = phrasePayload(from: input) {
+            let candidate = payload.cleanedPayload()
+            if !candidate.isEmpty {
+                let suggestion = candidate.hasSuffix("?") ? candidate : "\(candidate)?"
+                let grammarScan = analysisService.analyzeText(suggestion)
+                let qualityLine = grammarScan.grammarIssues.first.map { "Hinweis: \($0.suggestion)" }
+                    ?? "Hinweis: Die Formulierung ist bereits gut verständlich."
+                return "Du kannst sagen:\n\"\(suggestion)\"\n\n\(qualityLine)"
+            }
+        }
+
+        if let lookup = dictionaryLookup, !lookup.translations.isEmpty {
+            return vocabularyResponse(for: input, dictionaryLookup: lookup)
+        }
+
+        let analysis = analysisService.analyzeText(input)
+        let topIssue = analysis.grammarIssues.first?.suggestion
+        let topics = recommender.recommendTopics(from: input, limit: 2)
+        let topicLine = topics.isEmpty ? "" : "\nEmpfohlene Themen: \(topics.joined(separator: ", "))"
+
+        if let topIssue {
+            return "Zu deiner Anfrage: \"\(input)\"\n\nSchneller Sprachhinweis: \(topIssue)\(topicLine)"
+        }
+
+        return "Verstanden: \"\(input)\"\n\nWenn du willst, kann ich den Satz direkt korrigieren, natürlicher formulieren oder uebersetzen.\(topicLine)"
+    }
+
+    private func phrasePayload(from input: String) -> String? {
+        let patterns = [
+            "(?i)^how can i say\\s+(.+?)\\??\\s*$",
+            "(?i)^how do i say\\s+(.+?)\\??\\s*$",
+            "(?i)^can i say\\s+(.+?)\\??\\s*$",
+            "(?i)^wie kann ich\\s+(.+?)\\s+auf englisch sagen\\??\\s*$"
+        ]
+
+        for pattern in patterns {
+            if let captured = firstCapturedGroup(pattern, in: input), !captured.cleanedPayload().isEmpty {
+                return captured
+            }
+        }
+        return nil
+    }
+
+    private func firstCapturedGroup(_ pattern: String, in text: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+              match.numberOfRanges > 1,
+              let range = Range(match.range(at: 1), in: text)
+        else {
+            return nil
+        }
+        return String(text[range])
     }
 
     private func grammarResponse(_ input: String) -> String {
@@ -646,30 +720,58 @@ private final class AIChatRepository {
     func sendMessage(userInput: String, selectedMode: AIChatMode, isOnline: Bool) async -> AIRepositoryResult {
         let decision = router.route(userInput: userInput, selectedMode: selectedMode)
         let dictionaryLookup = await lookupDictionaryIfRelevant(userInput: userInput, decision: decision, isOnline: isOnline)
+        let inferencePath = preferredInferencePath(input: decision.inputForModel, isOnline: isOnline)
 
         memory.add(AIChatMessage(isUser: true, text: userInput))
         try? await Task.sleep(nanoseconds: 450_000_000)
 
-        let response = engine.generateResponse(
-            input: decision.inputForModel,
-            mode: decision.mode,
-            directTranslationOnly: decision.directTranslationOnly,
-            dictionaryLookup: dictionaryLookup
-        )
+        let response: String
+        var effectiveInferencePath = inferencePath
+        if inferencePath == .proxy,
+           let proxyResponse = await requestProxyResponse(input: decision.inputForModel, mode: decision.mode) {
+            response = proxyResponse
+        } else {
+            effectiveInferencePath = .onDevice
+            response = engine.generateResponse(
+                input: decision.inputForModel,
+                mode: decision.mode,
+                directTranslationOnly: decision.directTranslationOnly,
+                dictionaryLookup: dictionaryLookup
+            )
+        }
 
         let topics = decision.mode == .grammar ? recommender.recommendTopics(from: decision.inputForModel) : []
         let finalResponse: String
         if topics.isEmpty || decision.mode != .grammar {
-            finalResponse = response
+            finalResponse = "\(response)\n\nEngine: \(effectiveInferencePath.label)"
         } else {
             let topicLines = topics.map { "- \($0)" }.joined(separator: "\n")
-            finalResponse = "\(response)\n\nPassende Grammatikthemen:\n\(topicLines)"
+            finalResponse = "\(response)\n\nPassende Grammatikthemen:\n\(topicLines)\n\nEngine: \(effectiveInferencePath.label)"
         }
 
         let assistant = AIChatMessage(isUser: false, text: finalResponse)
         memory.add(assistant)
 
-        return AIRepositoryResult(response: finalResponse, mode: decision.mode, recommendedTopics: topics, dictionaryLookup: dictionaryLookup)
+        return AIRepositoryResult(
+            response: finalResponse,
+            mode: decision.mode,
+            recommendedTopics: topics,
+            dictionaryLookup: dictionaryLookup,
+            inferencePath: effectiveInferencePath
+        )
+    }
+
+    private func preferredInferencePath(input: String, isOnline: Bool) -> AIInferencePath {
+        let onDeviceAvailable = input.count <= 1500
+        if onDeviceAvailable { return .onDevice }
+        return isOnline ? .proxy : .onDevice
+    }
+
+    private func requestProxyResponse(input: String, mode: AIChatMode) async -> String? {
+        // Existing proxy structure is preserved intentionally; concrete provider wiring remains optional.
+        _ = input
+        _ = mode
+        return nil
     }
 
     private func lookupDictionaryIfRelevant(userInput: String, decision: AIIntentDecision, isOnline: Bool) async -> DictionaryLookup? {

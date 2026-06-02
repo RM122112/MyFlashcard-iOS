@@ -1,34 +1,52 @@
-# MyFlashcard iOS
+# MyFlashcard (iOS)
 
-Native SwiftUI flashcard app with AI chat, grammar hub, and a dedicated dictionary detail view.
+Offline-first Lernapp fuer intelligentes Englischlernen mit Fokus auf:
 
-## What was added
+`Vokabel -> Erklaerung -> Synonyme -> Beispiele -> Audio -> Flashcard -> Quiz -> Wiederholung`
 
-- AI chat MVVM flow (`AIChatViewModel`) with intent routing and language-aware behavior.
-- Translation-first handling for requests like `Wie sagt man ... auf Englisch?`.
-- Offline AI fallback for grammar, improve, analyze, and translation flows.
-- Grammar topic recommendations shared from AI chat to Grammar Hub.
-- Grammar Hub chapters, search, favorites, completion progress, and expandable cards.
-- Local persistence for favorites/completion and recommendations using `UserDefaults`.
-- Dedicated dictionary detail view with clickable source link, grouped hits, and a reload action.
-- Bamooz dictionary parsing with live lookup and cache-aware display state.
+## Kernfunktionen
 
-## Main files
+- SwiftUI + SwiftData, MVVM-orientierte Struktur
+- Spaced Repetition (SM-2) mit Priorisierung schwieriger Woerter
+- Quiz-Modi: Multiple Choice, Lueckentext, Diktat, SRS-Review
+- KI-gestuetzte Textanalyse (offline-first), Grammatik- und Stilhilfen
+- Dictionary-Lookup mit Cache und Quelle
+- Lernfortschritt: Tagesziel, Streak, XP, Wochenuebersicht
 
-- `Views/TextAnalysisView.swift`
-- `Views/GrammarView.swift`
-- `Views/DictionaryDetailView.swift`
-- `Models/Vocabulary.swift`
+## Architektur (kompakt)
 
-## Build
+- `Models/`: Datenmodelle (`Vocabulary`, `Synonym`, Analysemodelle)
+- `Services/`: SRS, Sprache (TTS), Textanalyse, Datenimport
+- `ViewModels/`: Screen-Logik fuer Browse, Input, Quiz, Flashcards
+- `Views/`: SwiftUI-Screens und Lern-Workflows
 
-```bash
-xcodebuild -project /Users/rezamousavi/Downloads/MyFlashcardOS/MyFlashcard.xcodeproj -scheme MyFlashcardR -configuration Debug -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
+## Projekt starten
+
+1. In Xcode `MyFlashcard.xcodeproj` oeffnen
+2. Scheme `MyFlashcardR` waehlen
+3. iOS Simulator auswaehlen
+4. Run (`Cmd + R`)
+
+## Build per CLI
+
+```zsh
+cd /Users/rezamousavi/Downloads/learning
+xcodebuild -project MyFlashcard.xcodeproj -scheme MyFlashcardR -configuration Debug -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
 ```
 
-## Notes
+## Screenshots
 
-- Build currently succeeds.
-- Existing warnings outside this change may still appear (for example in `SpeechService.swift`).
-- The dictionary detail view is embedded in `BrowseView` and `TextAnalysisView` via navigation links.
+Empfohlen fuer GitHub:
+
+- `docs/screenshots/flashcards.png`
+- `docs/screenshots/quiz.png`
+- `docs/screenshots/stats.png`
+- `docs/screenshots/ai-chat.png`
+
+Wenn der Ordner noch nicht existiert, bitte anlegen und echte App-Screenshots einfuegen.
+
+## Hinweise
+
+- Offline-first bleibt fuer Kernfunktionen erhalten.
+- Externe KI/Proxy-Anbindung bleibt optional und als Fallback gedacht.
 

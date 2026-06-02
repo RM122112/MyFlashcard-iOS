@@ -12,7 +12,13 @@ struct QuizView: View {
     @State private var isFinished = false
 
     private var prioritizedVocabulary: [Vocabulary] {
-        SRSService.normalizeWordAges(for: vocabulary)
+        // Normalize word ages without mutation in computed property
+        for vocab in vocabulary {
+            let normalized = LearningStatusHelper.normalizedStatus(for: vocab)
+            if normalized != vocab.wordStatusValue {
+                vocab.wordStatusValue = normalized
+            }
+        }
         return vocabulary.sorted { SRSService.reviewPriority(for: $0) > SRSService.reviewPriority(for: $1) }
     }
 

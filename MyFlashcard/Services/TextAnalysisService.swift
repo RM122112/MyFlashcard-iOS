@@ -48,6 +48,9 @@ class TextAnalysisService {
 
         // Count sentences
         let sentences = countSentences(text)
+        let cefrEstimate = estimateCEFRLevel(text: text, words: analyzedWords, issues: grammarIssues)
+        let weaknessAreas = detectWeaknessAreas(issues: grammarIssues)
+        let recommendedExercises = buildExerciseRecommendations(for: weaknessAreas)
 
         return TextAnalysisResult(
             originalText: text,
@@ -56,7 +59,10 @@ class TextAnalysisService {
             wordCount: analyzedWords.count,
             characterCount: text.count,
             detectedLanguage: detectedLanguage,
-            grammarIssues: grammarIssues
+            grammarIssues: grammarIssues,
+            cefrEstimate: cefrEstimate,
+            weaknessAreas: weaknessAreas,
+            recommendedExercises: recommendedExercises
         )
     }
 
@@ -444,5 +450,74 @@ class TextAnalysisService {
         }
 
         return issues
+    }
+
+    // MARK: - Learning Focus
+
+    private func estimateCEFRLevel(text: String, words: [AnalyzedWord], issues: [GrammarIssue]) -> String {
+        let tokenCount = max(words.count, 1)
+        let uniqueCount = Set(words.map { $0.lemma.lowercased() }).count
+        let lexicalVariety = Double(uniqueCount) / Double(tokenCount)
+        let avgSentenceLength = Double(tokenCount) / Double(max(countSentences(text), 1))
+        let grammarPenalty = Double(issues.filter { $0.type == .grammar || $0.type == .structure }.count)
+
+        var score = 0.0
+        score += lexicalVariety * 50
+        score += min(avgSentenceLength, 28) * 1.2
+        score -= grammarPenalty * 1.8
+
+        switch score {
+        case ..<14: return "A1"
+        case 14..<19: return "A2"
+        case 19..<24: return "B1"
+        case 24..<30: return "B2"
+        case 30..<36: return "C1"
+        default: return "C2"
+        }
+    }
+
+    private func detectWeaknessAreas(issues: [GrammarIssue]) -> [String] {
+        var buckets: [String: Int] = [:]
+        for issue in issues {
+            switch issue.type {
+            case .spelling:
+                buckets["Rechtschreibung", default: 0] += 1
+            case .grammar:
+                buckets["Grammatikregeln", default: 0] += 1
+            case .structure:
+                buckets["Satzstruktur", default: 0] += 1
+            case .suggestion:
+                buckets["Wortschatz & Stil", default: 0] += 1
+            }
+        }
+
+        return buckets
+            .sorted { lhs, rhs in
+                if lhs.value == rhs.value { return lhs.key < rhs.key }
+                return lhs.value > rhs.value
+            }
+            .map { "\($0.key) (\($0.value))" }
+            .prefix(3)
+            .map { $0 }
+    }
+
+    private func buildExerciseRecommendations(for weaknessAreas: [String]) -> [String] {
+        guard !weaknessAreas.isEmpty else {
+            return ["Kurzen freien Text (5-6 Saetze) schreiben und auf Konsistenz pruefen."]
+        }
+
+        var recommendations: [String] = []
+        for area in weaknessAreas {
+            if area.contains("Grammatik") {
+                recommendations.append("10 Min. gezielte Grammatikuebung (Zeitformen + Artikel) mit eigenen Beispielen.")
+            } else if area.contains("Satzstruktur") {
+                recommendations.append("Schreibe 5 kurze Saetze mit klarer Subjekt-Verb-Struktur und korrekter Interpunktion.")
+            } else if area.contains("Rechtschreibung") {
+                recommendations.append("Diktat mit 8-10 Woertern und anschliessendem Selbstkorrektur-Check.")
+            } else if area.contains("Wortschatz") {
+                recommendations.append("Ersetze 5 allgemeine Woerter durch praezisere Synonyme in eigenen Saetzen.")
+            }
+        }
+        return Array(NSOrderedSet(array: recommendations)) as? [String] ?? recommendations
     }
 }

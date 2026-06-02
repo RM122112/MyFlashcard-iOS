@@ -30,6 +30,7 @@
 		021 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 121 /* StatsView.swift */; };
 		022 /* QuizHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122 /* QuizHubView.swift */; };
 			023 /* DictionaryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 123 /* DictionaryDetailView.swift */; };
+		024 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 124 /* KeychainService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -57,6 +58,7 @@
 		121 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		122 /* QuizHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizHubView.swift; sourceTree = "<group>"; };
 			123 /* DictionaryDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryDetailView.swift; sourceTree = "<group>"; };
+		124 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -88,7 +90,7 @@
 				306 /* Services */,
 				110 /* Assets.xcassets */,
 			);
-			path = MyFlashcard;
+			path = "";
 			sourceTree = "<group>";
 		};
 		302 /* Products */ = {
@@ -144,6 +146,7 @@
 				115 /* TextAnalysisService.swift */,
 				116 /* GrammarDatabase.swift */,
 				117 /* SRSService.swift */,
+				124 /* KeychainService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -239,6 +242,7 @@
 				021 /* StatsView.swift in Sources */,
 				022 /* QuizHubView.swift in Sources */,
 							023 /* DictionaryDetailView.swift in Sources */,
+				024 /* KeychainService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
