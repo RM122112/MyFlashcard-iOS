@@ -1,5 +1,6 @@
 import SwiftUI
 import NaturalLanguage
+import os
 
 // MARK: - Modes
 
@@ -52,7 +53,6 @@ enum DetectedLanguage {
 private struct AIIntentDecision {
     let mode: AIChatMode
     let inputForModel: String
-    let directTranslationOnly: Bool
 }
 
 private final class AIIntentRouter {
@@ -68,28 +68,70 @@ private final class AIIntentRouter {
         try! NSRegularExpression(pattern: "(?i)how do you say\\s+(.+?)\\s+in english\\??\\s*$"),
         try! NSRegularExpression(pattern: "(?i)how can i say\\s+(.+?)(?:\\s+in english)?\\??\\s*$"),
         try! NSRegularExpression(pattern: "(?i)übersetze\\s+(.+?)\\s+ins englische\\??\\s*$"),
-        try! NSRegularExpression(pattern: "(?i)(.+?)\\s+wie kann ich (?:es|das|diesen satz)?\\s*auf englisch sagen\\??\\s*$")
+        try! NSRegularExpression(pattern: "(?i)(.+?)\\s+wie kann ich (?:es|das|diesen satz)?\\s*auf englisch sagen\\??\\s*$"),
+        try! NSRegularExpression(pattern: "(?i)wie heißt\\s+(.+?)\\s+auf\\s+(englisch|deutsch|persisch|dari|französisch|arabisch|spanisch)\\??\\s*$"),
+        try! NSRegularExpression(pattern: "(?i)übersetze\\s+(.+?)\\s+auf\\s+(englisch|deutsch|persisch|dari|französisch|arabisch|spanisch)\\??\\s*$"),
+        try! NSRegularExpression(pattern: "(?i)translate\\s+(.+?)\\s+to\\s+(english|german|persian|farsi|dari|french|arabic|spanish)\\??\\s*$")
+    ]
+
+    private let translationKeywords = [
+        "übersetze", "übersetzen", "translate", "translation", "wie heißt", "wie sagt man",
+        "auf englisch", "auf deutsch", "auf persisch", "auf dari", "auf französisch",
+        "auf arabisch", "auf spanisch", "to english", "to german", "to persian", "to farsi",
+        "to dari", "to french", "to arabic", "to spanish"
+    ]
+
+    /// Small-Talk-Phrasen die NICHT als Uebersetzung/Analyse behandelt werden sollen
+    private let smallTalkPhrases: Set<String> = [
+        "wie geht es dir", "wie gehts", "wie geht's", "wie geht es",
+        "na wie gehts", "hallo", "hi", "hey", "moin",
+        "guten tag", "guten morgen", "guten abend", "gute nacht",
+        "danke", "vielen dank", "dankeschoen", "tschuess", "tschüss",
+        "bye", "auf wiedersehen", "bis bald", "ciao",
+        "ja", "nein", "ok", "okay", "alles klar",
+        "was kannst du", "hilfe",
+        "how are you", "hello", "good morning", "good evening",
+        "good night", "thank you", "thanks", "bye", "goodbye",
+        "what's up", "whats up"
     ]
 
     func route(userInput: String, selectedMode: AIChatMode) -> AIIntentDecision {
         let trimmed = userInput.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Small Talk immer als Chat behandeln
+        if isSmallTalk(trimmed) {
+            return AIIntentDecision(mode: .chat, inputForModel: trimmed)
+        }
+
         let language = detectLanguage(trimmed)
 
-        if let translationPayload = extractTranslationPayload(from: trimmed) {
-            return AIIntentDecision(mode: .translate, inputForModel: translationPayload, directTranslationOnly: true)
+        if selectedMode == .translate || isTranslationRequest(trimmed) {
+            return AIIntentDecision(mode: .translate, inputForModel: buildTranslationInput(from: trimmed))
         }
 
         let lower = trimmed.lowercased()
         let explicitGrammar = grammarTriggers.contains { lower.contains($0) }
         if explicitGrammar && language == .english {
-            return AIIntentDecision(mode: .grammar, inputForModel: extractGrammarPayload(trimmed), directTranslationOnly: false)
+            return AIIntentDecision(mode: .grammar, inputForModel: extractGrammarPayload(trimmed))
         }
 
         if selectedMode == .grammar && language != .english {
-            return AIIntentDecision(mode: .chat, inputForModel: trimmed, directTranslationOnly: false)
+            return AIIntentDecision(mode: .chat, inputForModel: trimmed)
         }
 
-        return AIIntentDecision(mode: selectedMode, inputForModel: trimmed, directTranslationOnly: false)
+        return AIIntentDecision(mode: selectedMode, inputForModel: trimmed)
+    }
+
+    private func isSmallTalk(_ input: String) -> Bool {
+        let cleaned = input.lowercased()
+            .trimmingCharacters(in: CharacterSet(charactersIn: " ?!.,;:"))
+        if smallTalkPhrases.contains(cleaned) { return true }
+        // Persische Gruesse
+        let persianGreetings = ["سلام", "درود", "خوبم", "ممنون", "مرسی", "چطوری", "حالت چطوره"]
+        for greeting in persianGreetings {
+            if input.contains(greeting) { return true }
+        }
+        return false
     }
 
     private func detectLanguage(_ text: String) -> DetectedLanguage {
@@ -131,6 +173,22 @@ private final class AIIntentRouter {
         return nil
     }
 
+    private func isTranslationRequest(_ input: String) -> Bool {
+        if extractTranslationPayload(from: input) != nil {
+            return true
+        }
+        let lower = input.lowercased()
+        return translationKeywords.contains(where: { lower.contains($0) })
+    }
+
+    private func buildTranslationInput(from input: String) -> String {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let payload = extractTranslationPayload(from: trimmed), !payload.isEmpty {
+            return payload
+        }
+        return trimmed
+    }
+
     private func extractGrammarPayload(_ input: String) -> String {
         if let idx = input.firstIndex(of: ":") {
             let after = String(input[input.index(after: idx)...]).trimmingCharacters(in: .whitespaces)
@@ -150,22 +208,6 @@ private final class AIIntentRouter {
 private extension String {
     func cleanedPayload() -> String {
         trimmingCharacters(in: CharacterSet(charactersIn: " \n\t\"'„“”?!.,:;"))
-    }
-}
-
-private enum TranslationSourcePolicy {
-    static let primaryName = "b-amooz dictionary"
-    static let primaryURL = "https://dic.b-amooz.com/en/dictionary"
-
-    static var primaryLabel: String {
-        "Primärquelle: \(primaryName)"
-    }
-
-    static func lookupURL(for query: String) -> String {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return primaryURL }
-        let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? trimmed
-        return "\(primaryURL)/w?word=\(encoded)"
     }
 }
 
@@ -238,261 +280,12 @@ struct DictionaryLookup: Codable, Hashable {
     }
 }
 
-private protocol DictionarySource {
-    var sourceName: String { get }
-    func lookup(query: String) async -> DictionaryLookup?
-}
-
-private final class DictionaryCacheStore {
-    private let defaults = UserDefaults.standard
-    private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
-    private let prefix = "dictionary.cache."
-
-    func load(query: String, now: Date = Date()) -> DictionaryLookup? {
-        let normalized = normalize(query)
-        guard !normalized.isEmpty,
-              let data = defaults.data(forKey: prefix + normalized),
-              let lookup = try? decoder.decode(DictionaryLookup.self, from: data)
-        else {
-            return nil
-        }
-        return lookup.withCacheFlags(fromCache: true, isStale: lookup.expiresAt <= now)
-    }
-
-    func save(_ lookup: DictionaryLookup) {
-        let normalized = normalize(lookup.normalizedQuery)
-        guard !normalized.isEmpty, let data = try? encoder.encode(lookup.withCacheFlags(fromCache: false, isStale: false)) else { return }
-        defaults.set(data, forKey: prefix + normalized)
-    }
-
-    private func normalize(_ value: String) -> String {
-        value
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
-    }
-}
-
-private final class BamoozDictionarySource: DictionarySource {
-    let sourceName = TranslationSourcePolicy.primaryName
-
-    func lookup(query: String) async -> DictionaryLookup? {
-        let normalized = normalize(query)
-        guard !normalized.isEmpty,
-              let url = URL(string: TranslationSourcePolicy.lookupURL(for: normalized))
-        else {
-            return nil
-        }
-
-        do {
-            let (data, response) = try await URLSession.shared.data(from: url)
-            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
-                  let html = String(data: data, encoding: .utf8)
-            else {
-                return nil
-            }
-
-            let description = parseMetaDescription(from: html)
-            let senses = parseTranslations(description: description, html: html)
-            let synonyms = parseSynonyms(from: html)
-            let examples = parseExamples(from: html)
-            guard !description.isEmpty || !senses.isEmpty || !synonyms.isEmpty || !examples.isEmpty else {
-                return nil
-            }
-
-            let now = Date()
-            return DictionaryLookup(
-                query: query.trimmingCharacters(in: .whitespacesAndNewlines),
-                normalizedQuery: normalized,
-                sourceName: sourceName,
-                sourceURL: url.absoluteString,
-                description: description,
-                translations: senses.map { $0.translation },
-                synonyms: synonyms,
-                examples: examples,
-                primaryPartOfSpeech: senses.first?.partOfSpeech,
-                cachedAt: now,
-                expiresAt: now,
-                fromCache: false,
-                isStale: false
-            )
-        } catch {
-            return nil
-        }
-    }
-
-    private func parseMetaDescription(from html: String) -> String {
-        guard let captured = firstMatch(#"<meta\s+name=\"Description\"\s+content=\"([^\"]+)\""#, in: html, options: [.caseInsensitive])?[safe: 0] else {
-            return ""
-        }
-        return decodeHTML(captured)
-    }
-
-    private func parseTranslations(description: String, html: String) -> [(translation: String, partOfSpeech: String?)] {
-        var senses: [(String, String?)] = allMatches(#"\d+\s*-\s*([^()]+?)\s*\(([^)]+)\)"#, in: description)
-            .compactMap { groups in
-                guard let translation = groups[safe: 0]?.trimmingCharacters(in: .whitespacesAndNewlines), !translation.isEmpty else { return nil }
-                let partOfSpeech = groups[safe: 1]?.trimmingCharacters(in: .whitespacesAndNewlines)
-                return (decodeHTML(translation), partOfSpeech.flatMap { decodeHTML($0) })
-            }
-
-        if senses.isEmpty {
-            senses = allMatches(#"<span[^>]*translation-index[^>]*>.*?</span>\s*<strong>(.*?)</strong>"#, in: html, options: [.caseInsensitive, .dotMatchesLineSeparators])
-                .compactMap { groups in
-                    guard let translation = groups[safe: 0].map(cleanHTMLText), !translation.isEmpty else { return nil }
-                    return (translation, nil)
-                }
-        }
-
-        var seen = Set<String>()
-        return senses.filter { seen.insert($0.0.lowercased()).inserted }.prefix(5).map { $0 }
-    }
-
-    private func parseSynonyms(from html: String) -> [String] {
-        guard let section = firstMatch(#"مترادف و متضاد(.*?)</div>\s*</div>"#, in: html, options: [.caseInsensitive, .dotMatchesLineSeparators])?.first else {
-            return []
-        }
-
-        var seen = Set<String>()
-        return allMatches(#"badge-pill\s+badge-primary[^>]*>(.*?)</small>"#, in: section, options: [.caseInsensitive])
-            .compactMap { $0[safe: 0].map(cleanHTMLText) }
-            .filter { !$0.isEmpty && seen.insert($0).inserted }
-            .prefix(6)
-            .map { $0 }
-    }
-
-    private func parseExamples(from html: String) -> [DictionaryExample] {
-        allMatches(
-            #"<div class=\"col-12 example-box\">.*?<span class=\"m-0\">(.*?)</span>.*?<span class=\"m-0 translation-example-box\">(.*?)</span>"#,
-            in: html,
-            options: [.caseInsensitive, .dotMatchesLineSeparators]
-        )
-        .compactMap { groups in
-            let source = groups[safe: 0].map(cleanHTMLText)?.removingNumericPrefix() ?? ""
-            let translation = groups[safe: 1].map(cleanHTMLText)?.removingNumericPrefix() ?? ""
-            guard !source.isEmpty || !translation.isEmpty else { return nil }
-            return DictionaryExample(source: source, translation: translation)
-        }
-        .prefix(3)
-        .map { $0 }
-    }
-
-    private func firstMatch(_ pattern: String, in text: String, options: NSRegularExpression.Options = []) -> [String]? {
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: options) else { return nil }
-        let range = NSRange(text.startIndex..., in: text)
-        guard let match = regex.firstMatch(in: text, options: [], range: range) else { return nil }
-        return (1..<match.numberOfRanges).compactMap { idx in
-            guard let range = Range(match.range(at: idx), in: text) else { return nil }
-            return String(text[range])
-        }
-    }
-
-    private func allMatches(_ pattern: String, in text: String, options: NSRegularExpression.Options = []) -> [[String]] {
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: options) else { return [] }
-        let range = NSRange(text.startIndex..., in: text)
-        return regex.matches(in: text, options: [], range: range).map { match in
-            (1..<match.numberOfRanges).compactMap { idx in
-                guard let range = Range(match.range(at: idx), in: text) else { return nil }
-                return String(text[range])
-            }
-        }
-    }
-
-    private func cleanHTMLText(_ value: String) -> String {
-        decodeHTML(value.replacingOccurrences(of: #"<[^>]+>"#, with: " ", options: .regularExpression))
-            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private func decodeHTML(_ value: String) -> String {
-        value
-            .replacingOccurrences(of: "&nbsp;", with: " ")
-            .replacingOccurrences(of: "&amp;", with: "&")
-            .replacingOccurrences(of: "&quot;", with: "\"")
-            .replacingOccurrences(of: "&#39;", with: "'")
-            .replacingOccurrences(of: "&lt;", with: "<")
-            .replacingOccurrences(of: "&gt;", with: ">")
-    }
-
-    private func normalize(_ value: String) -> String {
-        value
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
-    }
-}
-
-private final class DictionaryRepository {
-    private let cacheStore: DictionaryCacheStore
-    private let source: DictionarySource
-    private let ttl: TimeInterval
-
-    init(
-        cacheStore: DictionaryCacheStore = DictionaryCacheStore(),
-        source: DictionarySource = BamoozDictionarySource(),
-        ttl: TimeInterval = 7 * 24 * 60 * 60
-    ) {
-        self.cacheStore = cacheStore
-        self.source = source
-        self.ttl = ttl
-    }
-
-    func lookup(query: String, isOnline: Bool) async -> DictionaryLookup? {
-        let normalized = query
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
-
-        guard !normalized.isEmpty else { return nil }
-
-        let now = Date()
-        if let cached = cacheStore.load(query: normalized, now: now), cached.expiresAt > now {
-            return cached
-        }
-
-        if isOnline, let live = await source.lookup(query: query)?.withExpiry(ttl) {
-            cacheStore.save(live)
-            return live
-        }
-
-        return cacheStore.load(query: normalized, now: now)
-    }
-}
-
-private extension Array {
-    subscript(safe index: Int) -> Element? {
-        indices.contains(index) ? self[index] : nil
-    }
-}
-
-private extension String {
-    func removingNumericPrefix() -> String {
-        replacingOccurrences(of: #"^\d+[.)-]?\s*"#, with: "", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-}
-
-// MARK: - Offline Engine + Repository
+// MARK: - Online AI Repository
 
 private struct AIRepositoryResult {
     let response: String
     let mode: AIChatMode
     let recommendedTopics: [String]
-    let dictionaryLookup: DictionaryLookup?
-    let inferencePath: AIInferencePath
-}
-
-private enum AIInferencePath {
-    case onDevice
-    case proxy
-
-    var label: String {
-        switch self {
-        case .onDevice: return "On-device"
-        case .proxy: return "Proxy-Fallback"
-        }
-    }
 }
 
 private final class AIConversationMemory {
@@ -540,214 +333,20 @@ private final class GrammarTopicRecommender {
     }
 }
 
-private final class OfflineAIEngine {
-    private let analysisService = TextAnalysisService.shared
-    private let recommender = GrammarTopicRecommender()
-
-    func generateResponse(input: String, mode: AIChatMode, directTranslationOnly: Bool, dictionaryLookup: DictionaryLookup?) -> String {
-        switch mode {
-        case .translate:
-            return translateToEnglish(input, directOnly: directTranslationOnly, dictionaryLookup: dictionaryLookup)
-        case .grammar:
-            return grammarResponse(input)
-        case .analyze:
-            let result = analysisService.analyzeText(input)
-            let weaknessBlock = result.weaknessAreas.isEmpty ? "Keine klaren Schwachstellen erkannt." : result.weaknessAreas.joined(separator: "\n- ")
-            let exerciseBlock = result.recommendedExercises.prefix(2).joined(separator: "\n- ")
-            return "Wörter: \(result.wordCount)\nSätze: \(result.sentences)\nAuffälligkeiten: \(result.grammarIssues.count)\nCEFR (Schätzung): \(result.cefrEstimate)\n\nSchwächen:\n- \(weaknessBlock)\n\nAktive Übung:\n- \(exerciseBlock)"
-        case .improve:
-            let analysis = analysisService.analyzeText(input)
-            let taskHint = analysis.recommendedExercises.first ?? "Überarbeite den Text mit Fokus auf klare Satzstruktur."
-            return "Verbesserter Entwurf:\n\n\(input)\n\n- Verwende präzisere Verben\n- Entferne unnötige Füllwörter\n- Bevorzuge kürzere, klarere Sätze\n- Nächster Lernschritt: \(taskHint)"
-        case .professional:
-            return "Professionelle Version:\n\nThank you for your message. I would appreciate your feedback by tomorrow."
-        case .vocabulary:
-            return vocabularyResponse(for: input, dictionaryLookup: dictionaryLookup)
-        case .chat:
-            return chatResponse(input, dictionaryLookup: dictionaryLookup)
-        }
-    }
-
-    private func chatResponse(_ input: String, dictionaryLookup: DictionaryLookup?) -> String {
-        if let payload = phrasePayload(from: input) {
-            let candidate = payload.cleanedPayload()
-            if !candidate.isEmpty {
-                let suggestion = candidate.hasSuffix("?") ? candidate : "\(candidate)?"
-                let grammarScan = analysisService.analyzeText(suggestion)
-                let qualityLine = grammarScan.grammarIssues.first.map { "Hinweis: \($0.suggestion)" }
-                    ?? "Hinweis: Die Formulierung ist bereits gut verständlich."
-                return "Du kannst sagen:\n\"\(suggestion)\"\n\n\(qualityLine)"
-            }
-        }
-
-        if let lookup = dictionaryLookup, !lookup.translations.isEmpty {
-            return vocabularyResponse(for: input, dictionaryLookup: lookup)
-        }
-
-        let analysis = analysisService.analyzeText(input)
-        let topIssue = analysis.grammarIssues.first?.suggestion
-        let topics = recommender.recommendTopics(from: input, limit: 2)
-        let topicLine = topics.isEmpty ? "" : "\nEmpfohlene Themen: \(topics.joined(separator: ", "))"
-
-        if let topIssue {
-            return "Zu deiner Anfrage: \"\(input)\"\n\nSchneller Sprachhinweis: \(topIssue)\(topicLine)"
-        }
-
-        return "Verstanden: \"\(input)\"\n\nWenn du willst, kann ich den Satz direkt korrigieren, natürlicher formulieren oder uebersetzen.\(topicLine)"
-    }
-
-    private func phrasePayload(from input: String) -> String? {
-        let patterns = [
-            "(?i)^how can i say\\s+(.+?)\\??\\s*$",
-            "(?i)^how do i say\\s+(.+?)\\??\\s*$",
-            "(?i)^can i say\\s+(.+?)\\??\\s*$",
-            "(?i)^wie kann ich\\s+(.+?)\\s+auf englisch sagen\\??\\s*$"
-        ]
-
-        for pattern in patterns {
-            if let captured = firstCapturedGroup(pattern, in: input), !captured.cleanedPayload().isEmpty {
-                return captured
-            }
-        }
-        return nil
-    }
-
-    private func firstCapturedGroup(_ pattern: String, in text: String) -> String? {
-        guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
-              match.numberOfRanges > 1,
-              let range = Range(match.range(at: 1), in: text)
-        else {
-            return nil
-        }
-        return String(text[range])
-    }
-
-    private func grammarResponse(_ input: String) -> String {
-        let result = analysisService.analyzeText(input)
-        let top = result.grammarIssues.prefix(5)
-        if top.isEmpty {
-            return "Korrigierter Text:\n\(input)\n\nKeine größeren Grammatikprobleme gefunden."
-        }
-
-        let bullets = top.map { "- \($0.issue): \($0.suggestion)" }.joined(separator: "\n")
-        return "Grammatik-Feedback:\n\n\(bullets)\n\nOriginal:\n\(input)"
-    }
-
-    private func translateToEnglish(_ input: String, directOnly: Bool, dictionaryLookup: DictionaryLookup?) -> String {
-        if let lookup = dictionaryLookup, !lookup.translations.isEmpty {
-            let synonymsBlock = lookup.synonyms.isEmpty ? "" : "\nSynonyme: \(lookup.synonyms.joined(separator: ", "))"
-            let exampleBlock = lookup.examples.first.map { "\nBeispiel: \($0.source)\nفارسی: \($0.translation)" } ?? ""
-            let partOfSpeechBlock = lookup.primaryPartOfSpeech.map { "\nWortart: \($0)" } ?? ""
-            return """
-            Beste Übersetzung aus dem Dictionary:
-            \(lookup.translations.joined(separator: " • "))\(partOfSpeechBlock)\(synonymsBlock)\(exampleBlock)
-
-            Primärquelle:
-            \(lookup.sourceName)
-            \(lookup.sourceURL)
-            """
-        }
-
-        let normalized = input.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: " .!?\"'"))
-        let dictionary: [String: String] = [
-            "steh auf und geh": "Get up and go",
-            "ich liebe dich": "I love you",
-            "wie geht es dir": "How are you",
-            "danke": "Thank you",
-            "gute nacht": "Good night"
-        ]
-
-        if let value = dictionary[normalized] {
-            return """
-            Beste Übersetzung:
-            \(value)
-
-            توضیح فارسی:
-            این عبارت به‌صورت طبیعی و روزمره در انگلیسی استفاده می‌شود.
-
-            Primärquelle:
-            \(TranslationSourcePolicy.primaryLabel)
-            \(TranslationSourcePolicy.lookupURL(for: input))
-            """
-        }
-        if directOnly {
-            return """
-            Keine verlässliche Offline-Direktübersetzung gefunden.
-
-            Bitte prüfe Bedeutung und Übersetzung über die Primärquelle:
-            \(TranslationSourcePolicy.primaryLabel)
-            \(TranslationSourcePolicy.lookupURL(for: input))
-            """
-        }
-        return """
-        Für eine präzise Übersetzung oder Bedeutungsprüfung nutze bitte:
-        \(TranslationSourcePolicy.primaryLabel)
-        \(TranslationSourcePolicy.lookupURL(for: input))
-        """
-    }
-
-    private func vocabularyResponse(for input: String, dictionaryLookup: DictionaryLookup?) -> String {
-        if let lookup = dictionaryLookup {
-            let translations = lookup.translations.isEmpty ? "–" : lookup.translations.joined(separator: " • ")
-            let synonyms = lookup.synonyms.isEmpty ? "–" : lookup.synonyms.joined(separator: ", ")
-            let example = lookup.examples.first.map { "\($0.source)\n\($0.translation)" } ?? "–"
-            return """
-            Wortschatzhilfe:
-            Bedeutung: \(translations)
-            Wortart: \(lookup.primaryPartOfSpeech ?? "–")
-            Synonyme: \(synonyms)
-            Beispiel:
-            \(example)
-
-            Quelle:
-            \(lookup.sourceName)
-            \(lookup.sourceURL)
-            """
-        }
-
-        return "Wortschatzhilfe:\n- resilient: توانایی بازیابی سریع پس از فشار یا مشکل\n- concise: kurz, klar und ohne unnötige Details\n- accurate: korrekt, präzise und verlässlich"
-    }
-}
-
 private final class AIChatRepository {
     private let router = AIIntentRouter()
     private let memory = AIConversationMemory()
-    private let engine = OfflineAIEngine()
     private let recommender = GrammarTopicRecommender()
-    private let dictionaryRepository = DictionaryRepository()
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "MyFlashcard", category: "AIChatRepository")
+    private let noProviderMessage = "Kein API-Key konfiguriert. Bitte hinterlegen Sie einen gültigen API-Key in der Konfigurationsdatei."
 
-    func sendMessage(userInput: String, selectedMode: AIChatMode, isOnline: Bool) async -> AIRepositoryResult {
+    func sendMessage(userInput: String, selectedMode: AIChatMode) async -> AIRepositoryResult {
         let decision = router.route(userInput: userInput, selectedMode: selectedMode)
-        let dictionaryLookup = await lookupDictionaryIfRelevant(userInput: userInput, decision: decision, isOnline: isOnline)
-        let inferencePath = preferredInferencePath(input: decision.inputForModel, isOnline: isOnline)
-
         memory.add(AIChatMessage(isUser: true, text: userInput))
-        try? await Task.sleep(nanoseconds: 450_000_000)
 
-        let response: String
-        var effectiveInferencePath = inferencePath
-        if inferencePath == .proxy,
-           let proxyResponse = await requestProxyResponse(input: decision.inputForModel, mode: decision.mode) {
-            response = proxyResponse
-        } else {
-            effectiveInferencePath = .onDevice
-            response = engine.generateResponse(
-                input: decision.inputForModel,
-                mode: decision.mode,
-                directTranslationOnly: decision.directTranslationOnly,
-                dictionaryLookup: dictionaryLookup
-            )
-        }
-
+        let response = await requestOnlineResponse(input: decision.inputForModel, mode: decision.mode)
         let topics = decision.mode == .grammar ? recommender.recommendTopics(from: decision.inputForModel) : []
-        let finalResponse: String
-        if topics.isEmpty || decision.mode != .grammar {
-            finalResponse = "\(response)\n\nEngine: \(effectiveInferencePath.label)"
-        } else {
-            let topicLines = topics.map { "- \($0)" }.joined(separator: "\n")
-            finalResponse = "\(response)\n\nPassende Grammatikthemen:\n\(topicLines)\n\nEngine: \(effectiveInferencePath.label)"
-        }
+        let finalResponse = response
 
         let assistant = AIChatMessage(isUser: false, text: finalResponse)
         memory.add(assistant)
@@ -755,67 +354,140 @@ private final class AIChatRepository {
         return AIRepositoryResult(
             response: finalResponse,
             mode: decision.mode,
-            recommendedTopics: topics,
-            dictionaryLookup: dictionaryLookup,
-            inferencePath: effectiveInferencePath
+            recommendedTopics: topics
         )
     }
 
-    private func preferredInferencePath(input: String, isOnline: Bool) -> AIInferencePath {
-        let onDeviceAvailable = input.count <= 1500
-        if onDeviceAvailable { return .onDevice }
-        return isOnline ? .proxy : .onDevice
+    private func requestOnlineResponse(input: String, mode: AIChatMode) async -> String {
+        let manager = AIProviderManager.shared
+        manager.reloadKeys()
+        guard manager.activeProviderCount > 0 else {
+            return noProviderMessage
+        }
+
+        let systemPrompt = buildSystemPrompt(for: mode)
+        let messages = AIProviderManager.optimizeMessages([
+            AIMessage(role: "system", content: systemPrompt),
+            AIMessage(role: "user", content: input)
+        ])
+
+        let maxAttempts = 3
+        var delayNs: UInt64 = 500_000_000
+        var lastError: Error?
+
+        for attempt in 1...maxAttempts {
+            let startedAt = Date()
+            do {
+                let response = try await manager.sendMessage(
+                    messages: messages,
+                    preferredProvider: nil,
+                    model: nil,
+                    maxTokens: 800,
+                    temperature: 0.7
+                )
+
+                let latencyMs = Int(Date().timeIntervalSince(startedAt) * 1000)
+                logger.info(
+                    "ai_success provider=\(response.provider?.rawValue ?? "unknown", privacy: .public) model=\(response.model ?? "unknown", privacy: .public) latency_ms=\(latencyMs) tokens=\(response.tokensUsed ?? -1)"
+                )
+
+                let content = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !content.isEmpty { return content }
+                lastError = AIProviderError.invalidResponse(statusCode: -1)
+            } catch {
+                let latencyMs = Int(Date().timeIntervalSince(startedAt) * 1000)
+                logger.error("ai_failure attempt=\(attempt) latency_ms=\(latencyMs) error=\(error.localizedDescription, privacy: .public)")
+                lastError = error
+                if attempt < maxAttempts, shouldRetry(error) {
+                    try? await Task.sleep(nanoseconds: delayNs)
+                    delayNs *= 2
+                    continue
+                }
+                break
+            }
+        }
+
+        if let providerError = lastError as? AIProviderError,
+           case .noAvailableProvider = providerError {
+            return noProviderMessage
+        }
+        return "Die Online-KI konnte aktuell keine Antwort liefern. Bitte versuche es erneut."
     }
 
-    private func requestProxyResponse(input: String, mode: AIChatMode) async -> String? {
-        // Existing proxy structure is preserved intentionally; concrete provider wiring remains optional.
-        _ = input
-        _ = mode
-        return nil
+    private func shouldRetry(_ error: Error) -> Bool {
+        guard let providerError = error as? AIProviderError else { return true }
+        switch providerError {
+        case .timeout, .networkError, .rateLimited, .invalidResponse:
+            return true
+        case .noAvailableProvider, .authenticationFailed, .allKeysExhausted, .allProvidersFailed:
+            return false
+        }
     }
 
-    private func lookupDictionaryIfRelevant(userInput: String, decision: AIIntentDecision, isOnline: Bool) async -> DictionaryLookup? {
-        let candidate: String?
-        switch decision.mode {
+    private func buildSystemPrompt(for mode: AIChatMode) -> String {
+        switch mode {
+        case .grammar:
+            return """
+            You are an English grammar tutor for a Persian-speaking learner.
+            Rules:
+            - Correct the user's text and explain mistakes briefly in German and Persian.
+            - Mark errors with → correction format.
+            - Give max 1 sentence explanation per error.
+            - If the text has no errors, confirm it's correct.
+            """
         case .translate:
-            candidate = decision.inputForModel
+            return """
+            You are a professional multilingual translator.
+            Always provide natural, grammatically correct translations.
+            Detect source and target language from the user request (German, English, Persian/Farsi, Dari, French, Arabic, Spanish).
+            If multiple translations are possible, show the most natural one first, followed by alternatives and a short explanation.
+            Never respond with dictionary URLs or external links.
+            Output must always follow exactly this structure:
+
+            **Übersetzung**
+            <best translation>
+
+            **Alternative Formulierungen**
+            - <alternative 1>
+            - <alternative 2>
+            - <alternative 3>
+
+            **Erklärung**
+            <short explanation why the best translation is the most natural in context>
+            """
+        case .improve:
+            return "Improve the style of this English text. Respond in German with the improved version and 2-3 short tips. Keep it concise."
+        case .analyze:
+            return "Analyze the following English text linguistically. Respond in German with word count, CEFR estimate, and issues. Be concise (max 4 sentences)."
+        case .professional:
+            return "Rewrite this text in a professional, formal English tone. Keep it concise and clear, no slang."
         case .vocabulary:
-            candidate = extractDictionaryCandidate(from: userInput, fallback: decision.inputForModel)
-        default:
-            candidate = nil
+            return """
+            You are a vocabulary coach for a Persian-speaking English learner.
+            For the given word/phrase, provide:
+            - Meaning in German and Persian (فارسی)
+            - 2-3 synonyms
+            - 1 example sentence
+            - CEFR level estimate
+            Keep it concise (max 3-4 lines).
+            """
+        case .chat:
+            return """
+            Du bist ein personalisierter Englisch-Lerncoach fuer einen persischsprachigen Lerner.
+
+            Kernregeln:
+            1. SPRACHE: Erklaere auf Deutsch. Bei Bedarf ergaenze auf Persisch (فارسی).
+            2. KUERZE: Antworte in maximal 3-4 Saetzen.
+            3. KONVERSATION: Bei Small Talk (Begruessungen, alltaegliche Fragen) antworte natuerlich und freundlich - KEINE Sprachanalyse, KEINE Grammatikkorrektur.
+            4. VOKABULAR: Fuehre maximal 2-3 neue Woerter pro Antwort ein.
+            5. Sei warm, ermutigend und hilfreich.
+
+            Beispiele fuer natuerliche Antworten:
+            - "Wie geht es dir?" → "Mir geht es gut, danke! Wie geht es dir? Bist du bereit zum Lernen?"
+            - "Hallo" → "Hallo! Schoen, dass du da bist. Was moechtest du heute lernen?"
+            - "سلام" → "سلام! حالت چطوره؟ امروز چی میخوای یاد بگیری?"
+            """
         }
-
-        guard let candidate, candidate.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 else {
-            return nil
-        }
-        return await dictionaryRepository.lookup(query: candidate, isOnline: isOnline)
-    }
-
-    private func extractDictionaryCandidate(from originalInput: String, fallback: String) -> String {
-        if let quoted = firstCaptured(#"[\"']([^\"']+)[\"']"#, in: originalInput), !quoted.isEmpty {
-            return quoted
-        }
-
-        let cleaned = fallback
-            .replacingOccurrences(of: #"(?i)(erkläre|explain|define|definition|meaning|bedeutung|was bedeutet|what does|wortschatz|vocabulary)\s+"#, with: "", options: .regularExpression)
-            .replacingOccurrences(of: #"[^\p{L}\p{N}\s-]"#, with: " ", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        return cleaned
-            .components(separatedBy: .whitespacesAndNewlines)
-            .filter { !$0.isEmpty }
-            .prefix(3)
-            .joined(separator: " ")
-    }
-
-    private func firstCaptured(_ pattern: String, in text: String) -> String? {
-        guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
-              let range = Range(match.range(at: 1), in: text)
-        else {
-            return nil
-        }
-        return String(text[range])
     }
 
     func history() -> [AIChatMessage] { memory.all() }
@@ -832,8 +504,6 @@ final class AIChatViewModel: ObservableObject {
     @Published var inputText: String = ""
     @Published var isLoading: Bool = false
     @Published var showModeSheet: Bool = false
-    @Published var isOnline: Bool = false
-    @Published var lastDictionaryLookup: DictionaryLookup?
 
     private let repository = AIChatRepository()
 
@@ -848,14 +518,13 @@ final class AIChatViewModel: ObservableObject {
         }
 
         Task {
-            let result = await repository.sendMessage(userInput: trimmed, selectedMode: selectedMode, isOnline: isOnline)
+            let result = await repository.sendMessage(userInput: trimmed, selectedMode: selectedMode)
             if !result.recommendedTopics.isEmpty {
                 GrammarRecommendationStore.shared.setTopics(result.recommendedTopics)
             }
 
             withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
                 messages.append(AIChatMessage(isUser: false, text: result.response))
-                lastDictionaryLookup = result.dictionaryLookup
                 isLoading = false
             }
         }
@@ -865,7 +534,6 @@ final class AIChatViewModel: ObservableObject {
         withAnimation(.easeInOut(duration: 0.2)) {
             messages.removeAll()
         }
-        lastDictionaryLookup = nil
         repository.clearHistory()
     }
 }
@@ -878,12 +546,6 @@ struct AIChatView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                if let lookup = viewModel.lastDictionaryLookup {
-                    DictionaryLookupCard(lookup: lookup)
-                        .padding(.horizontal)
-                        .padding(.top, 8)
-                }
-
                 if viewModel.messages.isEmpty {
                     ContentUnavailableView(
                         "KI-Chat",
@@ -998,53 +660,6 @@ struct AIChatView: View {
                     .presentationDetents([.medium])
             }
         }
-    }
-}
-
-private struct DictionaryLookupCard: View {
-    let lookup: DictionaryLookup
-
-    private var cacheLabel: String {
-        if lookup.isStale { return "Cache veraltet" }
-        if lookup.fromCache { return "Cache" }
-        return "Live"
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text("Dictionary-Lookup")
-                    .font(.headline)
-                Spacer()
-                Text(cacheLabel)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Text(lookup.sourceName)
-                .font(.subheadline)
-                .fontWeight(.medium)
-
-            if !lookup.summaryText.isEmpty {
-                Text(lookup.summaryText)
-                    .font(.subheadline)
-            }
-
-            if !lookup.synonyms.isEmpty {
-                Text("Synonyme: \(lookup.synonyms.joined(separator: ", "))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Text(lookup.sourceURL)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .textSelection(.enabled)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.accentColor.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
 

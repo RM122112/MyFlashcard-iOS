@@ -1,7 +1,7 @@
 # MyFlashcard – Technische Dokumentation (iOS)
 
-Stand: 2026-05-27  
-Plattform: iOS (SwiftUI + SwiftData, 100% offline)
+Stand: 2026-06-14  
+Plattform: iOS (SwiftUI + SwiftData, Offline-first mit optionaler KI-API)
 
 ---
 
@@ -17,14 +17,13 @@ Plattform: iOS (SwiftUI + SwiftData, 100% offline)
 
 ### Hauptbereiche (Tabs)
 
-1. `Browse` – Alle Vokabeln durchsuchen und loeschen
-2. `Add` – Einzel- und Bulk-Import
-3. `Cards` – Karteikarten/Flip-Lernen
-4. `Quiz` – Quiz-Hub (Multiple Choice, Cloze, Diktat, SRS)
-5. `Synonyms` – Synonym-Saetze und Import
-6. `Analyze` – Lokale Textanalyse (POS, Grammatik-/Strukturhinweise)
-7. `Grammar` – Offline-Grammatikdatenbank
-8. `Stats` – Lernstatistiken, Streak, SRS-Uebersicht
+1. `Wörter` – Alle Vokabeln durchsuchen, semantische Suche, loeschen
+2. `Hinzufügen` – Einzel- und Bulk-Import
+3. `Karten` – Karteikarten/Flip-Lernen
+4. `Quiz` – Quiz-Hub (Multiple Choice, Cloze mit NLP, Diktat, SRS)
+5. `KI-Chat` – KI-gestuetzter Chat (Grammatik, Uebersetzung, Analyse, Wortschatz)
+6. `Grammatik` – Offline-Grammatikdatenbank
+7. `Statistik` – Lernstatistiken, Streak, Vergessenskurve, Lerngeschwindigkeit
 
 ---
 
@@ -41,12 +40,15 @@ Plattform: iOS (SwiftUI + SwiftData, 100% offline)
 - SwiftData-Modelle in `MyFlashcard/Models/`
 - Services in `MyFlashcard/Services/`
 - klassische ViewModels in `MyFlashcard/ViewModels/ViewModels.swift`
+- KI-Chat ViewModel direkt in `TextAnalysisView.swift` (AIChatViewModel)
 
 ### Persistenz
 
 - SwiftData mit `Vocabulary` + `Synonym`
 - App-Start in `MyFlashcardApp.swift`
 - Fallback auf In-Memory-Container bei Persistenz-Ladefehlern
+- Dictionary-Cache in UserDefaults (TTL 7 Tage)
+- API-Key in iOS Keychain (KeychainService)
 
 ---
 
@@ -181,6 +183,59 @@ Lokale NLP-Analyse via `NaturalLanguage` + (iOS) `UITextChecker`.
 - `allRules`  
   Offline-Regelsammlung (`GrammarRule`) mit Kategorien, Formeln, Beispielen, Lerntipps.
 
+## `LearningAnalyticsService` (`Services/LearningAnalyticsService.swift`)
+
+Erweiterte Lernfortschritt-Analyse auf Basis vorhandener SRS-Daten.
+
+- `accuracyTrend(for:days:)`  
+  Taeglich aggregierte Genauigkeit der letzten N Tage.
+
+- `retentionCurve(for:)`  
+  Vergessenskurve: Behaltenrate nach SRS-Intervall-Bucketen (1d, 2-3d, 4-7d, etc.).
+
+- `velocity(for:)`  
+  Lerngeschwindigkeit: Woerter/Tag, geschaetzte Tage bis alle gemeistert, Mastery-Quote.
+
+- `weakestTags(for:limit:)`  
+  Schwaechste Kategorien/Tags nach durchschnittlicher Trefferquote.
+
+- `activityByHour(for:)`  
+  Lernaktivitaet pro Stunde (Anzahl Reviews + Genauigkeit).
+
+- `bestLearningHour(for:)`  
+  Stunde mit hoechster Accuracy (min. 3 Reviews).
+
+## `SemanticSearchService` (`Services/SemanticSearchService.swift`)
+
+Semantische Suche mit Apple NLEmbedding (offline, kein Netzwerk).
+
+- `search(query:in:limit:)`  
+  Findet semantisch aehnliche Vokabeln via Cosine-Similarity.  
+  Match-Typen: Exakt, Semantisch, Uebersetzung, Kontext.
+
+- `findSimilarWords(to:limit:)`  
+  Aehnliche Woerter direkt aus dem Embedding (nicht aus Vokabelliste).
+
+- Automatischer Fallback auf String-Matching falls kein Embedding verfuegbar.
+
+## `LocalLLMService` (`Services/LocalLLMService.swift`)
+
+Infrastruktur fuer zukuenftiges On-Device LLM (Core ML / GGML).
+
+- `LocalLLMProvider` – Protokoll fuer austauschbare Backends
+- `TemplateBasedLLM` – Aktueller regelbasierter Fallback
+- `CoreMLLLMProvider` – Platzhalter fuer Core ML Modelle (Phi-3-mini)
+- `LocalLLMService.shared` – Zentraler Service mit automatischer Backend-Wahl
+- `generate(prompt:maxTokens:)` – Generiert Antwort mit bestem verfuegbarem Backend
+
+## `KeychainService` (`Services/KeychainService.swift`)
+
+Sichere Speicherung von API-Keys im iOS Keychain.
+
+- `bootstrapIfNeeded(key:fallbackSecret:)` – Initiales Setzen aus Environment/Info.plist
+- `save(_:for:)` – Wert sicher speichern
+- `read(for:)` – Wert lesen
+
 ---
 
 ## 5) ViewModels und Funktionen
@@ -226,6 +281,8 @@ Lokale NLP-Analyse via `NaturalLanguage` + (iOS) `UITextChecker`.
 ## `BrowseView`
 
 - `deleteItems(offsets:)` – Swipe-Loeschlogik.
+- **Semantische Suche** – Toggle (🧠-Button) aktiviert NLEmbedding-basierte Suche.
+- Zeigt Match-Typ (Exakt/Semantisch/Uebersetzung) und Aehnlichkeits-Score an.
 
 ## `InputView`
 
@@ -251,11 +308,13 @@ Lokale NLP-Analyse via `NaturalLanguage` + (iOS) `UITextChecker`.
 
 ## `ClozeQuizView`
 
-- `quizCard(_:)` – UI fuer Cloze-Aufgabe
-- `clozeText(_:)` – Lueckentext-Generierung
-- `generateQuestions()`
-- `checkAnswer(_:)`
-- `next()`
+- **NLP-basierte Lueckentext-Generierung** mit `NLTagger`
+- `ClozeQuestion.generate(for:allVocabulary:)` – Waehlt Inhaltswort per POS-Tagging
+- Priorisiert Zielwort > Nomen > Verben > Adjektive
+- `quizCard(_:)` – UI mit Smart Hints (Wortart, Anfangsbuchstabe, Laenge)
+- `checkAnswer(_:)` – Fuzzy Matching (Levenshtein ≤ 2 → "Fast richtig")
+- Differenzierte SRS-Quality: Hint genutzt → `correct_difficult`
+- SRS-priorisierte Fragenauswahl (schwierigste Woerter zuerst)
 
 ## `DictationView`
 
@@ -277,6 +336,9 @@ Lokale NLP-Analyse via `NaturalLanguage` + (iOS) `UITextChecker`.
 
 - `statCard(title:value:icon:color:)` – KPI-Karte
 - `upcomingReviewData()` – Datengrundlage fuer SRS-Chart
+- **Accuracy-Trend-Chart** – Liniendiagramm der letzten 7 Tage
+- **Vergessenskurve-Chart** – Retention-Rate nach Intervall-Bucketen
+- **Lerngeschwindigkeit-Dashboard** – Woerter/Tag, ETA, beste Lernzeit
 
 ## `SynonymsView`
 
@@ -289,12 +351,17 @@ Lokale NLP-Analyse via `NaturalLanguage` + (iOS) `UITextChecker`.
 - `parseText(_:)` – Synonym-Bulkparser
 - `parseLine(_:)` – Zeilenparser
 
-## `TextAnalysisView`
+## `TextAnalysisView` / `AIChatView`
 
-- `analyzeText()` – Analyse starten
-- `clearAll()` – Eingabe/Ergebnisse zuruecksetzen
-- `colorFor(_:)` (zweimal in getrennten UI-Komponenten) – POS/Issue-Farbmapping
-- `sizeThatFits(...)`, `placeSubviews(...)` – Custom-Layout fuer Flow-Elemente
+- KI-Chat mit 7 Modi: Chat, Grammatik, Stil verbessern, Analysieren, Uebersetzen, Professionell, Wortschatz
+- `AIIntentRouter` – Automatische Erkennung der Benutzerabsicht
+- `AIChatRepository` – Orchestriert Inferenz-Pipeline:
+  1. **Proxy-API** (OpenAI-kompatibel, wenn API-Key vorhanden + online)
+  2. **Local LLM** (wenn Core ML Modell verfuegbar)
+  3. **On-Device Engine** (regelbasiert, immer offline verfuegbar)
+- `DictionaryRepository` – Woerterbuch-Lookup mit Cache (TTL 7 Tage)
+- `GrammarTopicRecommender` – Empfiehlt passende Grammatikthemen
+- Zeigt genutzten Inference-Path im Chat an (On-device / Proxy-API / Local LLM)
 
 ## `GrammarView`
 
@@ -315,12 +382,38 @@ Lokale NLP-Analyse via `NaturalLanguage` + (iOS) `UITextChecker`.
 
 - Keine Cloud-Abhaengigkeit fuer Kernfunktionen
 - Lokale Persistenz via SwiftData
-- Lokale NLP-Verarbeitung (NaturalLanguage)
+- Lokale NLP-Verarbeitung (NaturalLanguage + NLEmbedding)
 - TTS lokal via `AVFoundation`
+- API-Keys sicher im iOS Keychain (nicht im Klartext)
+- Proxy-API optional: App funktioniert vollstaendig ohne Netzwerk
 
 ---
 
-## 9) Start- und Laufhinweise
+## 9) KI-Architektur
+
+### Inferenz-Pipeline (Priorisierung)
+
+```
+1. Proxy-API (OpenAI-kompatibel) → wenn API-Key + online
+2. Local LLM (Core ML)           → wenn Modell im Bundle
+3. On-Device Engine (Regelbasiert)→ immer verfuegbar
+```
+
+### Semantische Suche
+
+- Nutzt `NLEmbedding.wordEmbedding(for: .english)` (Apple-integriert)
+- Cosine-Similarity fuer Wortaehnlichkeit
+- Kein Netzwerk noetig, ca. 200MB on-device Embedding
+
+### Lernanalyse
+
+- Basiert auf vorhandenen SRS-Daten (keine zusaetzliche Datenerfassung)
+- Berechnet Vergessenskurve, Accuracy-Trend, Lerngeschwindigkeit
+- Identifiziert optimale Lernzeiten und schwache Kategorien
+
+---
+
+## 10) Start- und Laufhinweise
 
 ### Build (Beispiel Simulator)
 
@@ -338,19 +431,40 @@ Falls alte lokale Daten nicht zum aktuellen Schema passen:
 
 ---
 
-## 10) Dateireferenz (Schnellindex)
+## 11) Dateireferenz (Schnellindex)
 
 - App-Entry: `MyFlashcard/MyFlashcardApp.swift`
 - Models: `MyFlashcard/Models/Vocabulary.swift`
-- Services: `MyFlashcard/Services/*.swift`
+- Services:
+  - `DataService.swift` – Datenimport, Dublettenkontrolle
+  - `SpeechService.swift` – Text-to-Speech
+  - `SRSService.swift` – Spaced Repetition (SM-2)
+  - `TextAnalysisService.swift` – Offline-NLP-Analyse
+  - `GrammarDatabase.swift` – Grammatik-Regelsammlung
+  - `KeychainService.swift` – Sichere Key-Speicherung
+  - `LearningAnalyticsService.swift` – Erweiterte Lernanalyse
+  - `SemanticSearchService.swift` – Semantische Suche (NLEmbedding)
+  - `LocalLLMService.swift` – On-Device LLM Infrastruktur
 - ViewModels: `MyFlashcard/ViewModels/ViewModels.swift`
 - Views: `MyFlashcard/Views/*.swift`
 
 ---
 
-## 11) Empfohlene naechste Doku-Schritte
+## 12) Empfohlene naechste Doku-Schritte
 
 - API-aehnliche Kurzdocs direkt per `///` an allen oeffentlichen Funktionen ergaenzen
 - Changelog-Datei (`CHANGELOG.md`) fuer neue Features
 - Nutzerhandbuch (separat, nicht-technisch) fuer Endanwender
+
+---
+
+## 13) Changelog (letzte Aenderungen)
+
+### 2026-06-14
+
+- **Proxy-API angebunden** – OpenAI-kompatible API mit modus-spezifischen System-Prompts
+- **Lernfortschritt-Analyse erweitert** – Vergessenskurve, Accuracy-Trend, Lerngeschwindigkeit, beste Lernzeit
+- **Cloze-Generierung verbessert** – NLP-basierte Wortauswahl, Smart Hints, Fuzzy Matching
+- **Semantische Suche** – NLEmbedding in BrowseView mit Match-Typ-Anzeige
+- **On-Device LLM Infrastruktur** – Protokoll, Core ML Platzhalter, Template-Fallback
 

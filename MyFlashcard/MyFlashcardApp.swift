@@ -3,12 +3,6 @@ import SwiftData
 
 @main
 struct MyFlashcardApp: App {
-    init() {
-        let fallbackSecret = (Bundle.main.object(forInfoDictionaryKey: "AI_PROXY_SECRET") as? String)
-            ?? ProcessInfo.processInfo.environment["AI_PROXY_SECRET"]
-        KeychainService.shared.bootstrapIfNeeded(key: .proxyAI, fallbackSecret: fallbackSecret)
-    }
-
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Vocabulary.self,

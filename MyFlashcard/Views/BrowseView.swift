@@ -9,9 +9,10 @@ struct BrowseView: View {
     @State private var searchText = ""
     @State private var selectedStatus: WordStatus? = nil
     @State private var showDictionary = false
+    @State private var useSemanticSearch = false
+    @State private var semanticResults: [SemanticSearchResult] = []
 
     private var normalizedVocabulary: [Vocabulary] {
-        // Normalize word ages without mutation in computed property
         for vocab in vocabulary {
             let normalized = LearningStatusHelper.normalizedStatus(for: vocab)
             if normalized != vocab.wordStatusValue {
@@ -28,7 +29,20 @@ struct BrowseView: View {
     }
 
     var filteredVocabulary: [Vocabulary] {
-        normalizedVocabulary.filter { vocab in
+        // Semantische Suche aktiv → Ergebnisse aus semanticResults nutzen
+        if useSemanticSearch && !searchText.isEmpty && !semanticResults.isEmpty {
+            let ids = Set(semanticResults.map { $0.vocabulary.id })
+            return normalizedVocabulary.filter { vocab in
+                let matchesStatus = selectedStatus == nil || LearningStatusHelper.normalizedStatus(for: vocab) == selectedStatus
+                return ids.contains(vocab.id) && matchesStatus
+            }.sorted { a, b in
+                let scoreA = semanticResults.first(where: { $0.vocabulary.id == a.id })?.score ?? 0
+                let scoreB = semanticResults.first(where: { $0.vocabulary.id == b.id })?.score ?? 0
+                return scoreA > scoreB
+            }
+        }
+
+        return normalizedVocabulary.filter { vocab in
             let matchesSearch = searchText.isEmpty ||
                 vocab.englishWord.localizedCaseInsensitiveContains(searchText) ||
                 vocab.german.localizedCaseInsensitiveContains(searchText) ||
@@ -60,14 +74,53 @@ struct BrowseView: View {
 
                 List {
                     ForEach(filteredVocabulary) { vocab in
-                        VocabularyRow(vocab: vocab, speechService: speechService)
+                        VStack(alignment: .leading, spacing: 0) {
+                            if useSemanticSearch && !searchText.isEmpty,
+                               let result = semanticResults.first(where: { $0.vocabulary.id == vocab.id }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: result.matchType.icon)
+                                        .font(.caption2)
+                                    Text(result.matchType.rawValue)
+                                        .font(.caption2)
+                                    Text("(\(Int(result.score * 100))%)")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                                .foregroundColor(.purple)
+                                .padding(.bottom, 2)
+                            }
+                            VocabularyRow(vocab: vocab, speechService: speechService)
+                        }
                     }
                     .onDelete(perform: deleteItems)
                 }
              }
             .navigationTitle("📚 Wortschatz (\(normalizedVocabulary.count))")
-            .searchable(text: $searchText, prompt: "Wörter suchen …")
+            .searchable(text: $searchText, prompt: useSemanticSearch ? "Semantisch suchen …" : "Wörter suchen …")
+            .onChange(of: searchText) { _, newValue in
+                if useSemanticSearch && !newValue.isEmpty {
+                    semanticResults = SemanticSearchService.shared.search(query: newValue, in: vocabulary)
+                } else {
+                    semanticResults = []
+                }
+            }
+            .onChange(of: useSemanticSearch) { _, enabled in
+                if enabled && !searchText.isEmpty {
+                    semanticResults = SemanticSearchService.shared.search(query: searchText, in: vocabulary)
+                } else {
+                    semanticResults = []
+                }
+            }
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        useSemanticSearch.toggle()
+                    } label: {
+                        Image(systemName: useSemanticSearch ? "brain.head.profile.fill" : "brain.head.profile")
+                            .foregroundColor(useSemanticSearch ? .purple : .secondary)
+                    }
+                    .accessibilityLabel(useSemanticSearch ? "Semantische Suche aktiv" : "Semantische Suche aktivieren")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink(
                         destination: DictionaryDetailView(),

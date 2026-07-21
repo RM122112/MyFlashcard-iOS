@@ -103,6 +103,15 @@ struct StatsView: View {
                     // SRS Overview
                     srsOverviewSection
 
+                    // Accuracy Trend
+                    accuracyTrendSection
+
+                    // Retention Curve
+                    retentionCurveSection
+
+                    // Learning Velocity
+                    velocitySection
+
                     // Word Buckets
                     wordBucketSection
                 }
@@ -367,6 +376,143 @@ struct StatsView: View {
             guard count > 0 else { return nil }
             let f = DateFormatter(); f.dateFormat = offset == 0 ? "'Heute'" : "EEE"
             return LabeledCount(label: f.string(from: day), count: count)
+        }
+    }
+
+    // MARK: - Accuracy Trend
+    private var accuracyTrendSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("📈 Genauigkeitstrend (7 Tage)")
+                .font(.headline)
+
+            let trend = LearningAnalyticsService.accuracyTrend(for: vocabulary)
+            if trend.allSatisfy({ $0.reviewCount == 0 }) {
+                Text("Noch keine Daten für den Trend vorhanden.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color(.secondarySystemBackground))
+                    .cornerRadius(12)
+            } else {
+                Chart(trend) { day in
+                    LineMark(
+                        x: .value("Tag", day.date, unit: .day),
+                        y: .value("Genauigkeit", day.accuracy)
+                    )
+                    .foregroundStyle(Color.green)
+                    .interpolationMethod(.catmullRom)
+                    PointMark(
+                        x: .value("Tag", day.date, unit: .day),
+                        y: .value("Genauigkeit", day.accuracy)
+                    )
+                    .foregroundStyle(Color.green)
+                }
+                .chartYScale(domain: 0...100)
+                .chartYAxis {
+                    AxisMarks(values: [0, 25, 50, 75, 100]) { value in
+                        AxisValueLabel { Text("\(value.as(Int.self) ?? 0)%") }
+                        AxisGridLine()
+                    }
+                }
+                .frame(height: 160)
+                .padding()
+                .background(Color(.secondarySystemBackground))
+                .cornerRadius(16)
+            }
+        }
+    }
+
+    // MARK: - Retention Curve
+    private var retentionCurveSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("🧠 Vergessenskurve")
+                .font(.headline)
+
+            let curve = LearningAnalyticsService.retentionCurve(for: vocabulary)
+            Chart(curve) { bucket in
+                BarMark(
+                    x: .value("Intervall", bucket.label),
+                    y: .value("Behalten", bucket.retentionRate)
+                )
+                .foregroundStyle(bucket.retentionRate >= 80 ? Color.green : bucket.retentionRate >= 50 ? Color.orange : Color.red)
+                .annotation(position: .top) {
+                    if bucket.retentionRate > 0 {
+                        Text("\(Int(bucket.retentionRate))%")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .chartYScale(domain: 0...100)
+            .frame(height: 160)
+            .padding()
+            .background(Color(.secondarySystemBackground))
+            .cornerRadius(16)
+
+            Text("Zeigt, wie gut du Wörter nach verschiedenen Zeitintervallen behältst.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    // MARK: - Learning Velocity
+    private var velocitySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("🚀 Lerngeschwindigkeit")
+                .font(.headline)
+
+            let vel = LearningAnalyticsService.velocity(for: vocabulary)
+            let bestHour = LearningAnalyticsService.bestLearningHour(for: vocabulary)
+
+            VStack(spacing: 12) {
+                HStack {
+                    VStack(spacing: 4) {
+                        Text(String(format: "%.1f", vel.wordsPerDay))
+                            .font(.system(size: 36, weight: .bold))
+                            .foregroundColor(.blue)
+                        Text("Wörter/Tag")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    Divider().frame(height: 50)
+
+                    VStack(spacing: 4) {
+                        Text("\(vel.masteredCount)/\(vel.totalCount)")
+                            .font(.system(size: 36, weight: .bold))
+                            .foregroundColor(.green)
+                        Text("Gemeistert")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+
+                if vel.estimatedDaysToMaster > 0 {
+                    HStack {
+                        Image(systemName: "calendar.badge.clock")
+                            .foregroundColor(.orange)
+                        Text("Geschätzt ~\(vel.estimatedDaysToMaster) Tage bis alle Wörter gemeistert")
+                            .font(.subheadline)
+                        Spacer()
+                    }
+                }
+
+                if let hour = bestHour {
+                    HStack {
+                        Image(systemName: "clock.fill")
+                            .foregroundColor(.purple)
+                        Text("Beste Lernzeit: \(hour):00 Uhr")
+                            .font(.subheadline)
+                        Spacer()
+                    }
+                }
+            }
+            .padding()
+            .background(Color(.secondarySystemBackground))
+            .cornerRadius(16)
         }
     }
 
