@@ -338,13 +338,12 @@ private final class AIChatRepository {
     private let memory = AIConversationMemory()
     private let recommender = GrammarTopicRecommender()
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "MyFlashcard", category: "AIChatRepository")
-    private let noProviderMessage = "Kein API-Key konfiguriert. Bitte hinterlegen Sie einen gültigen API-Key in der Konfigurationsdatei."
 
-    func sendMessage(userInput: String, selectedMode: AIChatMode) async -> AIRepositoryResult {
+    func sendMessage(userInput: String, selectedMode: AIChatMode) async throws -> AIRepositoryResult {
         let decision = router.route(userInput: userInput, selectedMode: selectedMode)
         memory.add(AIChatMessage(isUser: true, text: userInput))
 
-        let response = await requestOnlineResponse(input: decision.inputForModel, mode: decision.mode)
+        let response = try await requestOnlineResponse(input: decision.inputForModel, mode: decision.mode)
         let topics = decision.mode == .grammar ? recommender.recommendTopics(from: decision.inputForModel) : []
         let finalResponse = response
 
@@ -358,11 +357,11 @@ private final class AIChatRepository {
         )
     }
 
-    private func requestOnlineResponse(input: String, mode: AIChatMode) async -> String {
+    private func requestOnlineResponse(input: String, mode: AIChatMode) async throws -> String {
         let manager = AIProviderManager.shared
         manager.reloadKeys()
         guard manager.activeProviderCount > 0 else {
-            return noProviderMessage
+            throw AIProviderError.noAvailableProvider
         }
 
         let systemPrompt = buildSystemPrompt(for: mode)
@@ -407,11 +406,10 @@ private final class AIChatRepository {
             }
         }
 
-        if let providerError = lastError as? AIProviderError,
-           case .noAvailableProvider = providerError {
-            return noProviderMessage
+        if let lastError {
+            throw lastError
         }
-        return "Die Online-KI konnte aktuell keine Antwort liefern. Bitte versuche es erneut."
+        throw AIProviderError.allProvidersFailed
     }
 
     private func shouldRetry(_ error: Error) -> Bool {
@@ -504,6 +502,8 @@ final class AIChatViewModel: ObservableObject {
     @Published var inputText: String = ""
     @Published var isLoading: Bool = false
     @Published var showModeSheet: Bool = false
+    @Published var showErrorAlert: Bool = false
+    @Published var errorMessage: String = ""
 
     private let repository = AIChatRepository()
 
@@ -518,13 +518,19 @@ final class AIChatViewModel: ObservableObject {
         }
 
         Task {
-            let result = await repository.sendMessage(userInput: trimmed, selectedMode: selectedMode)
-            if !result.recommendedTopics.isEmpty {
-                GrammarRecommendationStore.shared.setTopics(result.recommendedTopics)
-            }
+            do {
+                let result = try await repository.sendMessage(userInput: trimmed, selectedMode: selectedMode)
+                if !result.recommendedTopics.isEmpty {
+                    GrammarRecommendationStore.shared.setTopics(result.recommendedTopics)
+                }
 
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
-                messages.append(AIChatMessage(isUser: false, text: result.response))
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+                    messages.append(AIChatMessage(isUser: false, text: result.response))
+                    isLoading = false
+                }
+            } catch {
+                errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                showErrorAlert = true
                 isLoading = false
             }
         }
@@ -658,6 +664,11 @@ struct AIChatView: View {
             .sheet(isPresented: $viewModel.showModeSheet) {
                 ModePickerSheet(selectedMode: $viewModel.selectedMode)
                     .presentationDetents([.medium])
+            }
+            .alert("KI-Anfrage fehlgeschlagen", isPresented: $viewModel.showErrorAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(viewModel.errorMessage)
             }
         }
     }

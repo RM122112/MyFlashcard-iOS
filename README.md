@@ -41,12 +41,18 @@ Offline-first Lernapp fuer intelligentes Englischlernen mit Fokus auf:
 3. iOS Simulator auswaehlen
 4. Run (`Cmd + R`)
 
-### API-Key konfigurieren (optional)
+### API-Key Setup fuer Entwickler (lokal, sicher)
 
-Fuer die Proxy-API-Anbindung:
-- `AI_PROXY_SECRET` als Environment-Variable oder in Info.plist setzen
-- Der Key wird sicher im iOS Keychain gespeichert
-- Ohne Key funktioniert die App vollstaendig offline
+Die KI-Provider-Keys werden zur Laufzeit aus `Info.plist` geladen.  
+`Info.plist` bekommt diese Werte ueber Build-Settings aus einer lokalen `.xcconfig`.
+
+1. Kopiere `MyFlashcard/Config/APIKeys.local.xcconfig.example` nach `MyFlashcard/Config/APIKeys.local.xcconfig`.
+2. Trage deine echten API-Keys in `MyFlashcard/Config/APIKeys.local.xcconfig` ein.
+3. Build + Run neu starten, damit `AIProviderManager.reloadKeys()` die Werte uebernimmt.
+
+Wichtig:
+- `MyFlashcard/Config/APIKeys.local.xcconfig` ist in `.gitignore` und wird nicht gepusht.
+- Ohne gesetzte Keys bleibt kein KI-Provider aktiv.
 
 ## Build per CLI
 

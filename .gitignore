@@ -4,4 +4,4 @@ build/
 local.properties
 *.xcuserstate
 MyFlashcard-Android/
-
+MyFlashcard/Config/APIKeys.local.xcconfig

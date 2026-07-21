@@ -18,20 +18,6 @@ enum AIProviderConfiguration {
         .init(provider: .mistral, priority: 7, isEnabled: true)
     ]
 
-    // ZENTRALE API-KEY-KONFIGURATION:
-    // - Trage je Provider einen oder mehrere Keys ein.
-    // - Mehrere Keys mit "|" trennen.
-    // Beispiel: "key1|key2|key3"
-    static let apiKeys: [AIProviderIdentifier: String] = [
-        .openAI: "",
-        .openRouter: "",
-        .claude: "",
-        .gemini: "",
-        .deepSeek: "",
-        .groq: "",
-        .mistral: ""
-    ]
-
     static let environmentVariableNames: [AIProviderIdentifier: String] = [
         .openAI: "AI_PROXY_SECRET",
         .openRouter: "OPENROUTER_API_KEY",
@@ -55,8 +41,10 @@ enum AIProviderConfiguration {
     static func keys(for provider: AIProviderIdentifier) -> [String] {
         var sources: [String] = []
 
-        if let configured = apiKeys[provider], !configured.isEmpty {
-            sources.append(configured)
+        if let plistName = plistKeyNames[provider],
+           let plistValue = Bundle.main.object(forInfoDictionaryKey: plistName) as? String,
+           !plistValue.isEmpty {
+            sources.append(plistValue)
         }
 
         if let envName = environmentVariableNames[provider],
@@ -65,17 +53,26 @@ enum AIProviderConfiguration {
             sources.append(envValue)
         }
 
-        if let plistName = plistKeyNames[provider],
-           let plistValue = Bundle.main.object(forInfoDictionaryKey: plistName) as? String,
-           !plistValue.isEmpty {
-            sources.append(plistValue)
-        }
-
         let keys = sources
             .flatMap { $0.split(separator: "|").map(String.init) }
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
+            .filter(isRuntimeKeyValue)
 
         return Array(NSOrderedSet(array: keys)) as? [String] ?? keys
+    }
+
+    private static func isRuntimeKeyValue(_ value: String) -> Bool {
+        guard !value.isEmpty else { return false }
+
+        if value.hasPrefix("$("), value.hasSuffix(")") { return false }
+        if value.hasPrefix("${"), value.hasSuffix("}") { return false }
+
+        let normalized = value.lowercased()
+        let invalidTokens: Set<String> = [
+            "changeme",
+            "your_api_key_here",
+            "api_key_here"
+        ]
+        return !invalidTokens.contains(normalized)
     }
 }
