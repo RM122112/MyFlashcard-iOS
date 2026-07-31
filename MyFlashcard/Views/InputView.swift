@@ -92,7 +92,7 @@ struct InputView: View {
                                         }
                                         Text("🇩🇪 \(entry.german)")
                                             .font(.caption)
-                                        Text("🇦🇫 \(entry.persian)")
+                                        Text("FA \(entry.persian)")
                                             .font(.caption)
                                             .environment(\.layoutDirection, .rightToLeft)
                                     }

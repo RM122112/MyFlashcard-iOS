@@ -46,6 +46,7 @@
 		208B /* LearningProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 208A /* LearningProgress.swift */; };
 		209B /* PDFLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 209A /* PDFLibraryService.swift */; };
 		210B /* PDFLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210A /* PDFLibraryView.swift */; };
+		211B /* AppPreviewFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 211A /* AppPreviewFile.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -91,6 +92,7 @@
 		208A /* LearningProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningProgress.swift; sourceTree = "<group>"; };
 		209A /* PDFLibraryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFLibraryService.swift; sourceTree = "<group>"; };
 		210A /* PDFLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFLibraryView.swift; sourceTree = "<group>"; };
+		211A /* AppPreviewFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreviewFile.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -164,6 +166,7 @@
 				122 /* QuizHubView.swift */,
 				123 /* DictionaryDetailView.swift */,
 				210A /* PDFLibraryView.swift */,
+				211A /* AppPreviewFile.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -295,6 +298,7 @@
 				208B /* LearningProgress.swift in Sources */,
 				209B /* PDFLibraryService.swift in Sources */,
 				210B /* PDFLibraryView.swift in Sources */,
+				211B /* AppPreviewFile.swift in Sources */,
 				009 /* DataService.swift in Sources */,
 				011 /* SpeechService.swift in Sources */,
 				012 /* SynonymsView.swift in Sources */,

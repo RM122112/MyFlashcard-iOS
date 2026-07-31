@@ -11,7 +11,7 @@ enum QuestionType: CaseIterable {
     var title: String {
         switch self {
         case .englishToGerman:  return "🇬🇧 → 🇩🇪"
-        case .englishToPersian: return "🇬🇧 → 🇦🇫"
+        case .englishToPersian: return "🇬🇧 → FA"
         case .germanToEnglish:  return "🇩🇪 → 🇬🇧"
         }
     }

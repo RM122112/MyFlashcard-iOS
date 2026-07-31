@@ -101,7 +101,7 @@ struct SynonymRow: View {
                 Text("🇩🇪 \(synonym.german)")
                     .font(.subheadline)
                 Spacer()
-                Text("🇦🇫 \(synonym.persian)")
+                Text("FA \(synonym.persian)")
                     .font(.subheadline)
                     .environment(\.layoutDirection, .rightToLeft)
             }
@@ -210,7 +210,7 @@ struct AddSynonymsSheet: View {
                                             .fontWeight(.semibold)
                                         Text("🇩🇪 \(entry.german)")
                                             .font(.caption)
-                                        Text("🇦🇫 \(entry.persian)")
+                                        Text("FA \(entry.persian)")
                                             .font(.caption)
                                     }
                                     Spacer()

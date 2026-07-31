@@ -205,7 +205,7 @@ struct VocabularyRow: View {
                 Text("🇩🇪 \(vocab.german)")
                     .font(.subheadline)
                 Spacer()
-                Text("🇦🇫 \(vocab.persian)")
+                Text("FA \(vocab.persian)")
                     .font(.subheadline)
                     .environment(\.layoutDirection, .rightToLeft)
             }
