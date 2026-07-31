@@ -1,6 +1,6 @@
 # MyFlashcard iOS
 
-> **Offline-first Lernplattform** für intelligentes Englischlernen mit Spaced Repetition, KI-Unterstützung und Gamification.
+> **Offline-first Lernplattform** für intelligentes Englischlernen mit Spaced Repetition und Gamification.
 >
 > Ziel: Eine professionelle Open-Source-Lernapp, die schrittweise zur vollständigen Lernplattform (PDF-Bibliothek, Annotationen, Cross-Platform-Sync) erweitert wird.
 
@@ -19,13 +19,15 @@
 | Synonyms | ✅ | Synonyme mit Übersetzungen |
 | Text Analysis | ✅ | Wortarten, CEFR-Level, Grammatikprüfung |
 | Dictionary Lookup | ✅ | Mehrere Quellen mit Cache |
-| AI Chat | ✅ | Mehrere Provider (OpenRouter, Deepseek, Gemini, etc.) |
-| Statistiken | ✅ | Streak, XP, Wortstatusverteilung |
+| AI Chat | ❌ Deaktiviert | KI-Chat wurde vollständig aus der App-Oberfläche entfernt |
+| Statistiken | ✅ | Streak, XP, Tagesziel und Wortstatusverteilung (persistiert über SwiftData) |
 | Lernfortschritt in SwiftData | ✅ **NEU** | XP, Streak, Reviews persistent gespeichert |
 | Bulk-Import | ✅ | Tab-separierte Eingabe mit Duplikatprüfung |
 | Dark Mode | ✅ | System-abhängig |
 | Offline First | ✅ | Alle Kernfunktionen ohne Internet |
-| PDF-Bibliothek | 🗺️ Phase 4 | Geplant |
+| PDF-Bibliothek | ✅ | Lokaler Import (Datei/Share/Drag&Drop), Karten mit Thumbnail, Seitenzahl, Dateigröße, Favoriten, Umbenennen, Teilen, Löschen |
+| PDF-Reader | ✅ | Vollständiges Multi-Page-Rendering, Zoom/Scroll, zuletzt gelesene Seite, Lesezeichen, PDF direkt löschbar, Seitensprung und Reader-Schnellaktionen |
+| PDF-Annotationen | ✅ | Highlight, Unterstreichen, Durchstreichen, Notizen, Bearbeiten/Löschen, Export + Schnellaktionen (Kopieren/Übersetzen/Suchen/Definieren/Teilen) inkl. OCR-Textfallback und professioneller Top-Toolbar (Tools, dynamische Eigenschaften, Farbpalette mit Custom/Recent, Undo/Redo) |
 | Gamification (vollständig) | 🗺️ Phase 3 | Geplant |
 | Tablet-Layout (iPad) | 🗺️ Phase 3 | Geplant |
 | Cloud-Synchronisation | 🗺️ Phase 5 | Geplant |
@@ -45,7 +47,7 @@ MyFlashcard/
 │   └── LearningProgress.swift        # ✅ NEU: XP/Streak/Reviews in SwiftData
 ├── Services/
 │   ├── SRSService.swift              # SM-2-Algorithmus (applyReview, dueCards)
-│   ├── DataService.swift             # Persistenz, Duplikatprüfung (O(log n))
+│   ├── DataService.swift             # Persistenz, Duplikatprüfung (case-insensitive)
 │   ├── LearningProgressService.swift # ✅ NEU: in LearningProgress.swift
 │   ├── SpeechService.swift           # Text-to-Speech (AVFoundation)
 │   ├── TextAnalysisService.swift     # NLP (NLTagger, CEFR)
@@ -54,7 +56,8 @@ MyFlashcard/
 │   ├── SemanticSearchService.swift   # NLEmbedding (Cosine-Similarity)
 │   ├── AIProviderManager.swift       # KI-Provider-Auswahl
 │   ├── AIProviderConfiguration.swift # API-Key-Bootstrap (Keychain)
-│   └── KeychainService.swift         # Sicherer Schlüsselspeicher
+│   ├── KeychainService.swift         # Sicherer Schlüsselspeicher
+│   └── PDFLibraryService.swift       # ✅ NEU: Lokale PDF-Metadaten + Annotationen
 ├── ViewModels/
 │   ├── BrowseViewModel.swift         # ✅ NEU (aus ViewModels.swift extrahiert)
 │   ├── InputViewModel.swift          # ✅ NEU (aus ViewModels.swift extrahiert)
@@ -74,7 +77,8 @@ MyFlashcard/
 │   ├── SynonymsView.swift            # Synonyme
 │   ├── TextAnalysisView.swift        # Textanalyse
 │   ├── StatsView.swift               # Statistiken
-│   └── DictionaryDetailView.swift    # Wörterbuch
+│   ├── DictionaryDetailView.swift    # Wörterbuch
+│   └── PDFLibraryView.swift          # ✅ NEU: PDF-Bibliothek + Reader
 └── Config/
     ├── AIProviders.xcconfig          # Build-Settings für AI-Keys
     └── APIKeys.local.xcconfig.example # Template für lokale Keys
@@ -205,7 +209,7 @@ xcodebuild \
 | Phase 1 | Architektur-Grundlage, Bug-Fixes, Code-Aufteilung | ✅ Abgeschlossen |
 | Phase 2 | Domain Layer (Use Cases), Repository Pattern, Fehlerbehandlung | 🔄 Geplant |
 | Phase 3 | Vollständige Gamification, Achievements, Tablet-Layout | 🗺️ Geplant |
-| Phase 4 | PDF-Bibliothek, Reader, Annotationen, Flashcards aus PDF | 🗺️ Geplant |
+| Phase 4 | PDF-Bibliothek, Reader, Annotationen, Flashcards aus PDF | ✅ Teil 1 abgeschlossen |
 | Phase 5 | Backend (Raspberry Pi), REST API, Sync (Android↔iOS) | 🗺️ Geplant |
 | Phase 6 | KI-Integration (Ollama, OpenAI, Gemini) | 🗺️ Geplant |
 

@@ -6,6 +6,82 @@ Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/).
 
 ---
 
+## [Unreleased] – Lernfortschritt & Datenintegrität
+
+### Geändert
+
+- **`StatsView.swift` nutzt jetzt durchgängig SwiftData-Fortschrittsdaten**
+  - Streak, Tagesziel, Reviews heute und Gesamt-XP kommen nun aus `LearningProgress` statt aus veralteten `AppStorage`-Werten.
+  - Wochenübersicht basiert auf persistierten Tages-Reviews.
+  - Tagesziel-Änderungen werden über `LearningProgressService` gespeichert.
+
+- **`LearningProgressService` erweitert**
+  - Neue Methode `setDailyGoal(_:modelContext:)` für zentrale, persistente Tagesziel-Verwaltung.
+
+- **`DataService` Duplikatlogik verbessert**
+  - Case-insensitive Duplikatprüfung für Einzel-Insert korrigiert.
+  - Bulk-Import erkennt nun auch Dubletten innerhalb desselben Imports.
+
+- **PDF-Löschen direkt im Reader ergänzt**
+  - `PDFReaderView` enthält jetzt einen sichtbaren Löschen-Button in der Toolbar.
+  - Vor dem Löschen wird ein Bestätigungsdialog angezeigt.
+
+- **PDF-Bibliothek modernisiert**
+  - `PDFLibraryService` erweitert um Seitenzahl, Dateigröße und persistente Thumbnail-Vorschau pro Dokument.
+  - Bibliothek zeigt nun Karten mit Metadaten und Schnellaktionen (Öffnen, Teilen, Favorisieren, Umbenennen, Löschen).
+  - Löschen in der Bibliothek erfolgt jetzt mit Sicherheitsabfrage.
+
+- **Import-/Sharing-Wege erweitert**
+  - Mehrfachimport via Dateiauswahl.
+  - Import aus Share Sheet / `onOpenURL` sowie Drag & Drop (`dropDestination`).
+
+- **Reader-Aktionsleiste erweitert**
+  - Auswahlaktionen direkt nach Textmarkierung: Markieren, Unterstreichen, Durchstreichen, Kopieren, Übersetzen, Suchen, Definieren, Notiz, Teilen.
+  - `PDFAnnotationType` um `strikethrough` ergänzt.
+  - OCR-Fallback für Textaktionen ergänzt, wenn ein PDF keinen eingebetteten Text liefert.
+
+- **PDF-Rendering stabilisiert**
+  - Reader startet standardmäßig im kontinuierlichen Einzelseitenmodus statt zweispaltiger Ansicht.
+  - Seitenstatus (`Seite x / n`) wird sichtbar geführt, inkl. robuster Seitenzahlvalidierung beim Laden.
+
+- **Werkzeugleiste auf Reader-Ebene professionalisiert**
+  - GoodNotes-inspirierte Top-Toolbar in 4 Bereichen: Werkzeuge, dynamische Eigenschaften, Farbpalette (inkl. Custom/Recent) und Schnellaktionen.
+  - Werkzeugsatz erweitert um Füller/Laser (vorbereitet), Eraser-Modi (Strich/Alles), Seitensprung, Reader-Einstellungen und PDF-Teilen direkt im Reader.
+  - Persistente Toolbar-Profile für Tool/Farbe/Deckkraft/Strichstärke/Toolbar-Sichtbarkeit sowie Undo/Redo für Annotationen inkl. Wiederherstellung in PDF + Metadaten.
+
+## [Unreleased] – KI-Funktion entfernt
+
+### Geändert
+
+- **KI-Chat vollständig aus der App-Oberfläche entfernt**
+  - `ContentView.swift`: KI-Chat-Tab entfernt.
+  - `MyFlashcardApp.swift`: KI-Bootstrap beim App-Start entfernt.
+
+## [Unreleased] – Phase 2: PDF-Bibliothek & Reader
+
+### Hinzugefügt
+
+- **`PDFLibraryService.swift`** – Lokaler PDF-Metadaten-Store.
+  - Persistiert Dokumente, Favoriten, Sortierung, letzte gelesene Seite, Lesezeichen und Annotationen.
+  - Speichert Metadaten als JSON im App-Sandbox-Verzeichnis.
+
+- **`PDFLibraryView.swift`** – Neue PDF-Oberfläche mit:
+  - PDF-Import über Dateiauswahl
+  - Bibliotheksliste (Sortieren, Favorisieren, Umbenennen, Löschen)
+  - Reader-Integration via PDFKit
+
+- **Reader-Features**
+  - Zoom und flüssiges Scrollen
+  - Zuletzt gelesene Seite (persistiert)
+  - Lesezeichen anlegen/löschen
+  - Annotationen: Markieren, Unterstreichen, Notiz hinzufügen, bearbeiten, löschen
+  - Annotationen als Text exportieren
+
+### Geändert
+
+- **`ContentView.swift`** – Neuer Tab „PDFs“ für den direkten Zugriff auf die lokale Bibliothek.
+- **`MyFlashcard.xcodeproj/project.pbxproj`** – Neue PDF-Dateien in Build-Phasen eingebunden.
+
 ## [Unreleased] – Phase 1: Architektur-Grundlage
 
 ### Hinzugefügt

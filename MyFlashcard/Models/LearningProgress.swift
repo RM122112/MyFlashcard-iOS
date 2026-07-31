@@ -217,6 +217,21 @@ final class LearningProgressService {
         }
     }
 
+    // MARK: - Daily Goal
+
+    /// Aktualisiert das tägliche Lernziel im heutigen Fortschrittseintrag.
+    func setDailyGoal(_ goal: Int, modelContext: ModelContext) {
+        let normalizedGoal = min(max(goal, 1), 200)
+        let progress = todayProgress(modelContext: modelContext)
+        progress.dailyGoal = normalizedGoal
+
+        do {
+            try modelContext.save()
+        } catch {
+            print("[LearningProgressService] setDailyGoal fehlgeschlagen: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - History
 
     /// Gibt die letzten `days` Tage als sortierte Liste zurück (neueste zuerst).

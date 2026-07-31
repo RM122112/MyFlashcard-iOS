@@ -28,11 +28,6 @@ struct MyFlashcardApp: App {
         }
     }()
 
-    init() {
-        AIProviderConfiguration.bootstrapStoredSecrets()
-        AIProviderManager.shared.reloadKeys()
-    }
-
     var body: some Scene {
         WindowGroup {
             ContentView()

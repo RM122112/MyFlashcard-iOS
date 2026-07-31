@@ -44,6 +44,8 @@
 		206B /* TextAnalysisModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 206A /* TextAnalysisModels.swift */; };
 		207B /* GrammarRecommendationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207A /* GrammarRecommendationStore.swift */; };
 		208B /* LearningProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 208A /* LearningProgress.swift */; };
+		209B /* PDFLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 209A /* PDFLibraryService.swift */; };
+		210B /* PDFLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210A /* PDFLibraryView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -87,6 +89,8 @@
 		206A /* TextAnalysisModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextAnalysisModels.swift; sourceTree = "<group>"; };
 		207A /* GrammarRecommendationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrammarRecommendationStore.swift; sourceTree = "<group>"; };
 		208A /* LearningProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningProgress.swift; sourceTree = "<group>"; };
+		209A /* PDFLibraryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFLibraryService.swift; sourceTree = "<group>"; };
+		210A /* PDFLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFLibraryView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -159,6 +163,7 @@
 				121 /* StatsView.swift */,
 				122 /* QuizHubView.swift */,
 				123 /* DictionaryDetailView.swift */,
+				210A /* PDFLibraryView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -188,6 +193,7 @@
 				128 /* AIProviderManager.swift */,
 				129 /* KeychainService.swift */,
 				130 /* AIProviderConfiguration.swift */,
+				209A /* PDFLibraryService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -287,6 +293,8 @@
 				206B /* TextAnalysisModels.swift in Sources */,
 				207B /* GrammarRecommendationStore.swift in Sources */,
 				208B /* LearningProgress.swift in Sources */,
+				209B /* PDFLibraryService.swift in Sources */,
+				210B /* PDFLibraryView.swift in Sources */,
 				009 /* DataService.swift in Sources */,
 				011 /* SpeechService.swift in Sources */,
 				012 /* SynonymsView.swift in Sources */,

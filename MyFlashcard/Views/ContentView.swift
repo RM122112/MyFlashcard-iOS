@@ -27,14 +27,14 @@ struct ContentView: View {
                     Label("Quiz", systemImage: "questionmark.circle")
                 }
 
-            AIChatView()
-                .tabItem {
-                    Label("KI-Chat", systemImage: "sparkles")
-                }
-
             GrammarView()
                 .tabItem {
                     Label("Grammatik", systemImage: "book")
+                }
+
+            PDFLibraryView()
+                .tabItem {
+                    Label("PDFs", systemImage: "doc.richtext")
                 }
 
             StatsView()
@@ -50,5 +50,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .modelContainer(for: [Vocabulary.self, Synonym.self], inMemory: true)
+        .modelContainer(for: [Vocabulary.self, Synonym.self, LearningProgress.self], inMemory: true)
 }

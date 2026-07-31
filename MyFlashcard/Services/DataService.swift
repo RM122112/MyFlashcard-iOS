@@ -72,11 +72,10 @@ class DataService {
 
     // MARK: - Duplicate Check
 
-    /// Prüft effizient, ob ein englisches Wort bereits existiert.
+    /// Prüft, ob ein englisches Wort bereits existiert (case-insensitive).
     ///
-    /// **Vorher:** Alle Vokabeln wurden geladen und in Swift gefiltert – O(n).
-    /// **Nachher:** SwiftData-`FetchDescriptor` mit `#Predicate` filtert
-    /// direkt auf SQLite-Ebene – O(log n) mit Index.
+    /// Hinweis: Für korrekte case-insensitive Vergleiche wird derzeit
+    /// auf Anwendungsebene normalisiert.
     ///
     /// - Parameters:
     ///   - englishWord: Das zu prüfende englische Wort (Groß-/Kleinschreibung ignoriert).
@@ -84,12 +83,11 @@ class DataService {
     /// - Returns: `true` wenn das Wort bereits vorhanden ist.
     func wordExists(_ englishWord: String, in context: ModelContext) -> Bool {
         let normalizedWord = englishWord.lowercased().trimmingCharacters(in: .whitespaces)
-        var descriptor = FetchDescriptor<Vocabulary>(
-            predicate: #Predicate { $0.englishWord == normalizedWord }
-        )
-        descriptor.fetchLimit = 1
-        let count = (try? context.fetchCount(descriptor)) ?? 0
-        return count > 0
+        let descriptor = FetchDescriptor<Vocabulary>()
+        let existing = (try? context.fetch(descriptor)) ?? []
+        return existing.contains {
+            $0.englishWord.lowercased().trimmingCharacters(in: .whitespaces) == normalizedWord
+        }
     }
 
     // MARK: - Insert
@@ -129,14 +127,14 @@ class DataService {
         // Einmalig alle existierenden Wörter laden (für Bulk effizienter als N Einzelabfragen)
         let existingDescriptor = FetchDescriptor<Vocabulary>()
         let existing = (try? context.fetch(existingDescriptor)) ?? []
-        let existingWords = Set(existing.map { $0.englishWord.lowercased().trimmingCharacters(in: .whitespaces) })
+        var knownWords = Set(existing.map { $0.englishWord.lowercased().trimmingCharacters(in: .whitespaces) })
 
         var successCount = 0
         var duplicates: [String] = []
 
         for entry in entries where entry.isValid {
             let normalized = entry.englishWord.lowercased().trimmingCharacters(in: .whitespaces)
-            if existingWords.contains(normalized) {
+            if knownWords.contains(normalized) {
                 duplicates.append(entry.englishWord)
             } else {
                 let vocab = Vocabulary(
@@ -146,6 +144,7 @@ class DataService {
                     exampleSentence: entry.exampleSentence
                 )
                 context.insert(vocab)
+                knownWords.insert(normalized)
                 successCount += 1
             }
         }
@@ -270,4 +269,3 @@ class TextParser {
         return [english, german, persian, example].filter { !$0.isEmpty }
     }
 }
-

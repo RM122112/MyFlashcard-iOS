@@ -5,11 +5,8 @@ import Charts
 /// Lernstatistiken Dashboard mit Swift Charts
 struct StatsView: View {
     @Query private var vocabulary: [Vocabulary]
-    @AppStorage("dailyGoal") private var dailyGoal = 10
-    @AppStorage("currentStreak") private var currentStreak = 0
-    @AppStorage("lastStudyDate") private var lastStudyDateStr = ""
-    @AppStorage("todayReviewedCount") private var todayReviewedCount = 0
-    @AppStorage("totalXP") private var totalXP = 0
+    @Query(sort: \LearningProgress.date, order: .reverse) private var progressHistory: [LearningProgress]
+    @Environment(\.modelContext) private var modelContext
 
     private var calendar: Calendar { Calendar.current }
 
@@ -20,9 +17,35 @@ struct StatsView: View {
     // MARK: - Computed Stats
     private var learnedCount: Int { vocabulary.filter { $0.isLearned }.count }
     private var totalCount: Int { vocabulary.count }
+    private var today: Date { calendar.startOfDay(for: Date()) }
 
     private var dueCount: Int {
         SRSService.dueCards(from: vocabulary).count
+    }
+
+    private var todayProgress: LearningProgress? {
+        progressHistory.first { calendar.isDate($0.date, inSameDayAs: today) }
+    }
+
+    private var latestProgress: LearningProgress? {
+        progressHistory.first
+    }
+
+    private var currentStreakValue: Int {
+        todayProgress?.currentStreak ?? latestProgress?.currentStreak ?? 0
+    }
+
+    private var todayReviewedCountValue: Int {
+        todayProgress?.reviewsToday ?? 0
+    }
+
+    private var dailyGoalValue: Int {
+        let goal = todayProgress?.dailyGoal ?? latestProgress?.dailyGoal ?? 10
+        return max(goal, 1)
+    }
+
+    private var totalXPValue: Int {
+        todayProgress?.totalXP ?? latestProgress?.totalXP ?? 0
     }
 
     private var statusCounts: [WordStatus: Int] {
@@ -49,10 +72,7 @@ struct StatsView: View {
     private var weeklyData: [DayStats] {
         (0..<7).map { offset in
             let date = calendar.date(byAdding: .day, value: -6 + offset, to: calendar.startOfDay(for: Date()))!
-            let reviewed = vocabulary.filter { vocab in
-                guard let last = vocab.lastReviewedAt else { return false }
-                return calendar.isDate(last, inSameDayAs: date)
-            }.count
+            let reviewed = progressHistory.first(where: { calendar.isDate($0.date, inSameDayAs: date) })?.reviewsToday ?? 0
             return DayStats(date: date, count: reviewed)
         }
     }
@@ -118,7 +138,7 @@ struct StatsView: View {
                 .padding()
             }
             .navigationTitle("📊 Lernstatistiken")
-            .onAppear { syncDailyReviewCounter() }
+            .onAppear { ensureTodayProgressEntry() }
         }
     }
 
@@ -128,7 +148,7 @@ struct StatsView: View {
             statCard(title: "Gesamt", value: "\(totalCount)", icon: "textformat.abc", color: .blue)
             statCard(title: "Bekannt", value: "\(learnedCount)", icon: "checkmark.seal.fill", color: .green)
             statCard(title: "Heute fällig", value: "\(dueCount)", icon: "calendar.badge.clock", color: .orange)
-            statCard(title: "XP", value: "\(totalXP)", icon: "star.fill", color: .purple)
+            statCard(title: "XP", value: "\(totalXPValue)", icon: "star.fill", color: .purple)
         }
     }
 
@@ -158,7 +178,7 @@ struct StatsView: View {
 
             HStack(spacing: 16) {
                 VStack(spacing: 4) {
-                    Text("\(currentStreak)")
+                    Text("\(currentStreakValue)")
                         .font(.system(size: 48, weight: .bold))
                         .foregroundColor(.orange)
                     Text("Tage in Folge")
@@ -170,14 +190,22 @@ struct StatsView: View {
                 Divider().frame(height: 60)
 
                 VStack(spacing: 8) {
-                    Text("Tagesziel: \(dailyGoal) Karten")
+                    Text("Tagesziel: \(dailyGoalValue) Karten")
                         .font(.subheadline)
-                    ProgressView(value: Double(min(todayReviewedCount, dailyGoal)), total: Double(dailyGoal))
+                    ProgressView(value: Double(min(todayReviewedCountValue, dailyGoalValue)), total: Double(dailyGoalValue))
                         .tint(.green)
-                    Text("\(todayReviewedCount) / \(dailyGoal) heute")
+                    Text("\(todayReviewedCountValue) / \(dailyGoalValue) heute")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Stepper("Ziel: \(dailyGoal)", value: $dailyGoal, in: 5...50, step: 5)
+                    Stepper(
+                        "Ziel: \(dailyGoalValue)",
+                        value: Binding(
+                            get: { dailyGoalValue },
+                            set: { updateDailyGoal($0) }
+                        ),
+                        in: 5...50,
+                        step: 5
+                    )
                         .font(.caption)
                 }
                 .frame(maxWidth: .infinity)
@@ -199,7 +227,7 @@ struct StatsView: View {
                     x: .value("Tag", day.dayLabel),
                     y: .value("Karten", day.count)
                 )
-                .foregroundStyle(day.count >= dailyGoal ? Color.green : Color.blue)
+                .foregroundStyle(day.count >= dailyGoalValue ? Color.green : Color.blue)
                 .annotation(position: .top) {
                     if day.count > 0 {
                         Text("\(day.count)")
@@ -236,7 +264,7 @@ struct StatsView: View {
                 HStack {
                     Text("Heute wiederholt")
                     Spacer()
-                    Text("\(todayReviewedCount)")
+                    Text("\(todayReviewedCountValue)")
                         .fontWeight(.semibold)
                 }
 
@@ -247,7 +275,7 @@ struct StatsView: View {
                         .fontWeight(.semibold)
                 }
 
-                let weeklyGoal = dailyGoal * 7
+                let weeklyGoal = dailyGoalValue * 7
                 ProgressView(value: Double(min(weekReviewedCount, weeklyGoal)), total: Double(max(weeklyGoal, 1)))
                     .tint(.purple)
 
@@ -516,13 +544,18 @@ struct StatsView: View {
         }
     }
 
-    private func syncDailyReviewCounter() {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let today = formatter.string(from: calendar.startOfDay(for: Date()))
-        if lastStudyDateStr != today {
-            todayReviewedCount = 0
+    private func ensureTodayProgressEntry() {
+        _ = LearningProgressService.shared.todayProgress(modelContext: modelContext)
+        do {
+            try modelContext.save()
+        } catch {
+            print("[StatsView] ensureTodayProgressEntry fehlgeschlagen: \(error.localizedDescription)")
         }
+    }
+
+    private func updateDailyGoal(_ goal: Int) {
+        let normalized = max(5, min(goal, 50))
+        LearningProgressService.shared.setDailyGoal(normalized, modelContext: modelContext)
     }
 }
 
@@ -541,4 +574,3 @@ struct LabeledCount: Identifiable {
     let label: String
     let count: Int
 }
-
