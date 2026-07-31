@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 struct AIProviderConfigEntry {
     let provider: AIProviderIdentifier
@@ -7,6 +8,8 @@ struct AIProviderConfigEntry {
 }
 
 enum AIProviderConfiguration {
+    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "MyFlashcard", category: "AIProviderConfiguration")
+
     // Aktivierungs-/Prioritätsreihenfolge (1 = höchste Priorität)
     static let providerConfigs: [AIProviderConfigEntry] = [
         .init(provider: .openAI, priority: 1, isEnabled: true),
@@ -41,6 +44,12 @@ enum AIProviderConfiguration {
     static func keys(for provider: AIProviderIdentifier) -> [String] {
         var sources: [String] = []
 
+        if let keychainName = plistKeyNames[provider],
+           let keychainValue = KeychainService.shared.read(for: keychainName),
+           !keychainValue.isEmpty {
+            sources.append(keychainValue)
+        }
+
         if let plistName = plistKeyNames[provider],
            let plistValue = Bundle.main.object(forInfoDictionaryKey: plistName) as? String,
            !plistValue.isEmpty {
@@ -59,6 +68,15 @@ enum AIProviderConfiguration {
             .filter(isRuntimeKeyValue)
 
         return Array(NSOrderedSet(array: keys)) as? [String] ?? keys
+    }
+
+    static func bootstrapStoredSecrets() {
+        for entry in providerConfigs where entry.isEnabled {
+            guard let plistName = plistKeyNames[entry.provider] else { continue }
+            let fallbackSecret = Bundle.main.object(forInfoDictionaryKey: plistName) as? String
+            logger.debug("bootstrap provider=\(entry.provider.rawValue, privacy: .public) key=\(plistName, privacy: .public) hasFallback=\((fallbackSecret?.isEmpty == false), privacy: .public)")
+            KeychainService.shared.bootstrapIfNeeded(key: plistName, fallbackSecret: fallbackSecret)
+        }
     }
 
     private static func isRuntimeKeyValue(_ value: String) -> Bool {

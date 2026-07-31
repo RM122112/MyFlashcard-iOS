@@ -317,7 +317,7 @@ struct SRSReviewView: View {
     }
 
     private func applyQuality(_ quality: SRSService.Quality, to card: Vocabulary) {
-        SRSService.applyReview(to: card, quality: quality)
+        SRSService.applyReview(to: card, quality: quality, modelContext: modelContext)
         try? modelContext.save()
 
         sessionTotal += 1

@@ -1,15 +1,21 @@
 import Foundation
+import SwiftData
 
-/// SM-2 Spaced Repetition Algorithm
-/// Based on: https://www.supermemo.com/en/archives1990-2015/english/ol/sm2
+// MARK: - SRSService
+
+/// SM-2 Spaced-Repetition-Algorithmus.
+///
+/// Implementierung basiert auf dem SuperMemo-2-Paper:
+/// https://www.supermemo.com/en/archives1990-2015/english/ol/sm2
+///
+/// **Qualitätsskala (0–5):**
+/// - 5: Perfekt erinnert
+/// - 4: Korrekt mit kleiner Zögerung
+/// - 3: Korrekt, aber schwierig
+/// - 2: Falsch, aber beim Sehen sofort erkannt
+/// - 1: Falsch, und selbst nach Antwort schwer
+/// - 0: Totaler Blackout
 struct SRSService {
-
-    private enum ProgressKeys {
-        static let currentStreak = "currentStreak"
-        static let lastStudyDate = "lastStudyDate"
-        static let todayReviewedCount = "todayReviewedCount"
-        static let totalXP = "totalXP"
-    }
 
     /// Quality of recall (0-5)
     /// 5 = perfect, 4 = correct with hesitation, 3 = correct with difficulty
@@ -88,22 +94,29 @@ struct SRSService {
         return (max(1, newInterval), newEF, newReps)
     }
 
-    /// Apply SRS update to a Vocabulary object
-    static func applyReview(to vocab: Vocabulary, quality: Quality) {
+    /// Bewertet eine Vokabelkarte und aktualisiert das SM-2-Modell.
+    ///
+    /// Der Lernfortschritt (XP, Streak) wird über `LearningProgressService`
+    /// persistent in SwiftData gespeichert.
+    ///
+    /// - Parameters:
+    ///   - vocab: Die zu bewertende Vokabel.
+    ///   - quality: Bewertung des Recalls (0–5).
+    ///   - modelContext: Optionaler SwiftData-Kontext für Fortschritts-Persistenz.
+    ///                   Wenn `nil`, wird der Fortschritt nicht persistent gespeichert.
+    @MainActor
+    static func applyReview(to vocab: Vocabulary, quality: Quality, modelContext: ModelContext? = nil) {
         normalizeWordAges(for: [vocab])
         let now = Date()
-        let currentInterval = vocab.srsInterval
-        let currentEF = vocab.srsEaseFactor
-        let currentReps = vocab.srsRepetitions
 
         let (nextInterval, newEF, newReps) = calculateNextReview(
             quality: quality,
-            currentInterval: currentInterval,
-            currentEaseFactor: currentEF,
-            repetitionCount: currentReps
+            currentInterval: vocab.srsInterval,
+            currentEaseFactor: vocab.srsEaseFactor,
+            repetitionCount: vocab.srsRepetitions
         )
 
-        vocab.srsInterval = nextInterval
+        vocab.srsInterval   = nextInterval
         vocab.srsEaseFactor = newEF
         vocab.srsRepetitions = newReps
         vocab.srsNextReview = Calendar.current.date(byAdding: .day, value: nextInterval, to: now) ?? now
@@ -120,7 +133,7 @@ struct SRSService {
             recordFailureDate(for: vocab, now: now)
         }
 
-        // Mark as learned after 5 successful repetitions
+        // 5 korrekte Wiederholungen → Karte als "gelernt" markieren
         vocab.isLearned = newReps >= 5
         vocab.lastQuizCorrect = quality.rawValue >= 3
         vocab.wordStatusValue = LearningStatusHelper.statusAfterReview(
@@ -130,7 +143,13 @@ struct SRSService {
             now: now
         )
         vocab.lastStatusChangedAt = now
-        updateLearningProgress(quality: quality, now: now)
+
+        // XP-Berechnung: 10 XP bei korrekter Antwort, 4 XP bei falscher
+        let xpGained = quality.rawValue >= 3 ? 10 : 4
+        if let context = modelContext {
+            // Persistenz: SwiftData (Phase 1)
+            LearningProgressService.shared.recordReview(xpGained: xpGained, modelContext: context)
+        }
     }
 
     /// Cards due for review today
@@ -178,43 +197,11 @@ struct SRSService {
             .filter { !$0.isEmpty }
 
         entries.append(formatter.string(from: now))
+        // Maximal 10 Fehler-Datumswerte speichern (lightweight analytics)
         if entries.count > 10 {
             entries = Array(entries.suffix(10))
         }
         vocab.recentFailureDates = entries.joined(separator: ",")
-    }
-
-    private static func updateLearningProgress(quality: Quality, now: Date) {
-        let defaults = UserDefaults.standard
-        let calendar = Calendar.current
-        let todayStart = calendar.startOfDay(for: now)
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let todayKey = formatter.string(from: todayStart)
-        let previousDay = formatter.string(from: calendar.date(byAdding: .day, value: -1, to: todayStart) ?? todayStart)
-
-        let lastStudyDate = defaults.string(forKey: ProgressKeys.lastStudyDate) ?? ""
-        var streak = defaults.integer(forKey: ProgressKeys.currentStreak)
-        var todayReviewedCount = defaults.integer(forKey: ProgressKeys.todayReviewedCount)
-        var totalXP = defaults.integer(forKey: ProgressKeys.totalXP)
-
-        if lastStudyDate != todayKey {
-            todayReviewedCount = 0
-            if lastStudyDate == previousDay {
-                streak = max(streak, 1) + 1
-            } else {
-                streak = 1
-            }
-        }
-
-        todayReviewedCount += 1
-        totalXP += quality.rawValue >= 3 ? 10 : 4
-
-        defaults.set(todayReviewedCount, forKey: ProgressKeys.todayReviewedCount)
-        defaults.set(todayKey, forKey: ProgressKeys.lastStudyDate)
-        defaults.set(streak, forKey: ProgressKeys.currentStreak)
-        defaults.set(totalXP, forKey: ProgressKeys.totalXP)
     }
 }
 

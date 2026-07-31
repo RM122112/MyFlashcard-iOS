@@ -232,7 +232,7 @@ struct ClozeQuizView: View {
         } else {
             quality = .incorrect_hard
         }
-        SRSService.applyReview(to: q.vocab, quality: quality)
+        SRSService.applyReview(to: q.vocab, quality: quality, modelContext: modelContext)
         try? modelContext.save()
     }
 

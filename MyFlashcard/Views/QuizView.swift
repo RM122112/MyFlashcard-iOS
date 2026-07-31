@@ -139,7 +139,7 @@ struct QuizView: View {
         if isCorrect {
             correctCount += 1
         }
-        SRSService.applyReview(to: vocab, quality: isCorrect ? .perfect : .incorrect_hard)
+        SRSService.applyReview(to: vocab, quality: isCorrect ? .perfect : .incorrect_hard, modelContext: modelContext)
 
         try? modelContext.save()
     }

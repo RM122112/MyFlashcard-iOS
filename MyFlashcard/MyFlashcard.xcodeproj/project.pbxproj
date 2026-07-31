@@ -33,7 +33,17 @@
 		025 /* LearningAnalyticsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125 /* LearningAnalyticsService.swift */; };
 		026 /* SemanticSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 126 /* SemanticSearchService.swift */; };
 		028 /* AIProviderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128 /* AIProviderManager.swift */; };
+		029 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 129 /* KeychainService.swift */; };
 		030 /* AIProviderConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 130 /* AIProviderConfiguration.swift */; };
+		200B /* BrowseViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200A /* BrowseViewModel.swift */; };
+		201B /* InputViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 201A /* InputViewModel.swift */; };
+		202B /* FlashcardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 202A /* FlashcardViewModel.swift */; };
+		203B /* QuizViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A /* QuizViewModel.swift */; };
+		204B /* GrammarModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 204A /* GrammarModels.swift */; };
+		205B /* QuizModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 205A /* QuizModels.swift */; };
+		206B /* TextAnalysisModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 206A /* TextAnalysisModels.swift */; };
+		207B /* GrammarRecommendationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207A /* GrammarRecommendationStore.swift */; };
+		208B /* LearningProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 208A /* LearningProgress.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -64,9 +74,19 @@
 		125 /* LearningAnalyticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningAnalyticsService.swift; sourceTree = "<group>"; };
 		126 /* SemanticSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SemanticSearchService.swift; sourceTree = "<group>"; };
 		128 /* AIProviderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIProviderManager.swift; sourceTree = "<group>"; };
+		129 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		130 /* AIProviderConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIProviderConfiguration.swift; sourceTree = "<group>"; };
 		131 /* AIProviders.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = AIProviders.xcconfig; sourceTree = "<group>"; };
 		132 /* APIKeys.local.xcconfig.example */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = APIKeys.local.xcconfig.example; sourceTree = "<group>"; };
+		200A /* BrowseViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseViewModel.swift; sourceTree = "<group>"; };
+		201A /* InputViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputViewModel.swift; sourceTree = "<group>"; };
+		202A /* FlashcardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlashcardViewModel.swift; sourceTree = "<group>"; };
+		203A /* QuizViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizViewModel.swift; sourceTree = "<group>"; };
+		204A /* GrammarModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrammarModels.swift; sourceTree = "<group>"; };
+		205A /* QuizModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizModels.swift; sourceTree = "<group>"; };
+		206A /* TextAnalysisModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextAnalysisModels.swift; sourceTree = "<group>"; };
+		207A /* GrammarRecommendationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrammarRecommendationStore.swift; sourceTree = "<group>"; };
+		208A /* LearningProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningProgress.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -113,6 +133,11 @@
 			isa = PBXGroup;
 			children = (
 				107 /* Vocabulary.swift */,
+				204A /* GrammarModels.swift */,
+				205A /* QuizModels.swift */,
+				206A /* TextAnalysisModels.swift */,
+				207A /* GrammarRecommendationStore.swift */,
+				208A /* LearningProgress.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -142,6 +167,10 @@
 			isa = PBXGroup;
 			children = (
 				108 /* ViewModels.swift */,
+				200A /* BrowseViewModel.swift */,
+				201A /* InputViewModel.swift */,
+				202A /* FlashcardViewModel.swift */,
+				203A /* QuizViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -157,6 +186,7 @@
 				125 /* LearningAnalyticsService.swift */,
 				126 /* SemanticSearchService.swift */,
 				128 /* AIProviderManager.swift */,
+				129 /* KeychainService.swift */,
 				130 /* AIProviderConfiguration.swift */,
 			);
 			path = Services;
@@ -248,6 +278,15 @@
 				006 /* QuizView.swift in Sources */,
 				007 /* Vocabulary.swift in Sources */,
 				008 /* ViewModels.swift in Sources */,
+				200B /* BrowseViewModel.swift in Sources */,
+				201B /* InputViewModel.swift in Sources */,
+				202B /* FlashcardViewModel.swift in Sources */,
+				203B /* QuizViewModel.swift in Sources */,
+				204B /* GrammarModels.swift in Sources */,
+				205B /* QuizModels.swift in Sources */,
+				206B /* TextAnalysisModels.swift in Sources */,
+				207B /* GrammarRecommendationStore.swift in Sources */,
+				208B /* LearningProgress.swift in Sources */,
 				009 /* DataService.swift in Sources */,
 				011 /* SpeechService.swift in Sources */,
 				012 /* SynonymsView.swift in Sources */,
@@ -265,6 +304,7 @@
 				025 /* LearningAnalyticsService.swift in Sources */,
 				026 /* SemanticSearchService.swift in Sources */,
 				028 /* AIProviderManager.swift in Sources */,
+				029 /* KeychainService.swift in Sources */,
 				030 /* AIProviderConfiguration.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -406,20 +446,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 89W724225C;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_AI_PROXY_SECRET = "$(AI_PROXY_SECRET)";
-				INFOPLIST_KEY_CLAUDE_API_KEY = "$(CLAUDE_API_KEY)";
-				INFOPLIST_KEY_CFBundleDisplayName = "My Flashcard";
-				INFOPLIST_KEY_DEEPSEEK_API_KEY = "$(DEEPSEEK_API_KEY)";
-				INFOPLIST_KEY_GEMINI_API_KEY = "$(GEMINI_API_KEY)";
-				INFOPLIST_KEY_GROQ_API_KEY = "$(GROQ_API_KEY)";
-				INFOPLIST_KEY_MISTRAL_API_KEY = "$(MISTRAL_API_KEY)";
-				INFOPLIST_KEY_OPENROUTER_API_KEY = "$(OPENROUTER_API_KEY)";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -444,20 +472,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 89W724225C;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_AI_PROXY_SECRET = "$(AI_PROXY_SECRET)";
-				INFOPLIST_KEY_CLAUDE_API_KEY = "$(CLAUDE_API_KEY)";
-				INFOPLIST_KEY_CFBundleDisplayName = "My Flashcard";
-				INFOPLIST_KEY_DEEPSEEK_API_KEY = "$(DEEPSEEK_API_KEY)";
-				INFOPLIST_KEY_GEMINI_API_KEY = "$(GEMINI_API_KEY)";
-				INFOPLIST_KEY_GROQ_API_KEY = "$(GROQ_API_KEY)";
-				INFOPLIST_KEY_MISTRAL_API_KEY = "$(MISTRAL_API_KEY)";
-				INFOPLIST_KEY_OPENROUTER_API_KEY = "$(OPENROUTER_API_KEY)";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

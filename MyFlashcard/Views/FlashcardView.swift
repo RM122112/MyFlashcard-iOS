@@ -111,7 +111,7 @@ struct FlashcardView: View {
     
     private func markAsLearned(_ correct: Bool) {
         let card = cards[currentIndex]
-        SRSService.applyReview(to: card, quality: correct ? .perfect : .incorrect_hard)
+        SRSService.applyReview(to: card, quality: correct ? .perfect : .incorrect_hard, modelContext: modelContext)
 
         try? modelContext.save()
         nextCard()

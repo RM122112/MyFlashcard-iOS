@@ -61,6 +61,10 @@ private final class AIIntentRouter {
     ]
 
     private let translationPatterns: [NSRegularExpression] = [
+        // German word-order: "Wie kann ich auf Englisch sagen ich habe Durst"
+        try! NSRegularExpression(pattern: "(?i)wie kann ich auf\\s+(?:englisch|deutsch|persisch|dari|französisch|arabisch|spanisch)\\s+sagen\\s+['\u{201E}\u{2018}]?(.+?)['\u{201C}\u{201D}\u{2019}]?\\s*$"),
+        // German word-order: "Übersetze auf Englisch 'ich habe Durst'"
+        try! NSRegularExpression(pattern: "(?i)übersetze\\s+auf\\s+(?:englisch|deutsch|persisch|dari|französisch|arabisch|spanisch)\\s+['\u{201E}\u{2018}]?(.+?)['\u{201C}\u{201D}\u{2019}]?\\s*$"),
         try! NSRegularExpression(pattern: "(?i)wie sagt man\\s+(.+?)\\s+auf englisch\\??\\s*$"),
         try! NSRegularExpression(pattern: "(?i)was heißt\\s+(.+?)\\s+auf englisch\\??\\s*$"),
         try! NSRegularExpression(pattern: "(?i)(.+?)\\s+auf englisch sagen\\??\\s*$"),
@@ -181,10 +185,31 @@ private final class AIIntentRouter {
         return translationKeywords.contains(where: { lower.contains($0) })
     }
 
+    /// Detects the target language mentioned in the user's request.
+    private func extractTargetLanguage(from input: String) -> String? {
+        let lower = input.lowercased()
+        if lower.contains("auf englisch") || lower.contains("ins englische") || lower.contains("to english") { return "English" }
+        if lower.contains("auf deutsch") || lower.contains("ins deutsche") || lower.contains("to german") { return "German" }
+        if lower.contains("auf persisch") || lower.contains("auf dari") || lower.contains("to persian") || lower.contains("to farsi") || lower.contains("to dari") { return "Persian/Farsi" }
+        if lower.contains("auf französisch") || lower.contains("to french") { return "French" }
+        if lower.contains("auf arabisch") || lower.contains("to arabic") { return "Arabic" }
+        if lower.contains("auf spanisch") || lower.contains("to spanish") { return "Spanish" }
+        return nil
+    }
+
     private func buildTranslationInput(from input: String) -> String {
         let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let payload = extractTranslationPayload(from: trimmed), !payload.isEmpty {
+        let targetLanguage = extractTargetLanguage(from: trimmed)
+        let payload = extractTranslationPayload(from: trimmed)
+
+        if let payload = payload, !payload.isEmpty, let lang = targetLanguage {
+            // Explicit, unambiguous instruction: AI always knows source text AND target language.
+            return "Translate to \(lang): \"\(payload)\""
+        } else if let payload = payload, !payload.isEmpty {
             return payload
+        } else if let lang = targetLanguage {
+            // Couldn't isolate the exact payload — pass the full request with the explicit language.
+            return "Translate the following request to \(lang): \(trimmed)"
         }
         return trimmed
     }
@@ -686,8 +711,13 @@ private struct MessageRow: View {
         HStack {
             if message.isUser { Spacer() }
             VStack(alignment: .leading, spacing: 4) {
-                Text(message.text)
-                    .font(.body)
+                if message.isUser {
+                    Text(message.text)
+                        .font(.body)
+                } else {
+                    markdownText(message.text)
+                        .font(.body)
+                }
                 Text(message.timestamp.formatted(date: .omitted, time: .shortened))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -697,6 +727,15 @@ private struct MessageRow: View {
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .frame(maxWidth: 320, alignment: .leading)
             if !message.isUser { Spacer() }
+        }
+    }
+
+    @ViewBuilder
+    private func markdownText(_ string: String) -> some View {
+        if let attributed = try? AttributedString(markdown: string, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
+            Text(attributed)
+        } else {
+            Text(string)
         }
     }
 }

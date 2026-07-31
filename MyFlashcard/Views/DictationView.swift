@@ -195,7 +195,7 @@ struct DictationView: View {
         showResult = true
         if isCorrect { correctCount += 1 }
 
-        SRSService.applyReview(to: card, quality: isCorrect ? .correct_hesitation : .incorrect_easy)
+        SRSService.applyReview(to: card, quality: isCorrect ? .correct_hesitation : .incorrect_easy, modelContext: modelContext)
         try? modelContext.save()
     }
 

@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 // MARK: - Multi-Provider AI Service
 // Zentraler AIProviderManager mit API-Key-Pooling, Failover, Load-Balancing und Health-Checks
@@ -73,7 +74,8 @@ enum AIProviderError: Error, LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .noAvailableProvider: return "Kein KI-Provider verfuegbar."
+        case .noAvailableProvider:
+            return "Kein KI-Provider verfuegbar. Lege lokal MyFlashcard/Config/APIKeys.local.xcconfig an und trage mindestens einen API-Key ein."
         case .allKeysExhausted(let p): return "Alle API-Keys fuer \(p) erschoepft."
         case .allProvidersFailed: return "Alle KI-Provider sind aktuell nicht erreichbar. Bitte spaeter erneut versuchen."
         case .rateLimited: return "Rate-Limit erreicht. Wechsle Provider..."
@@ -469,13 +471,23 @@ final class AIProviderManager {
 
     private var configurations: [AIProviderIdentifier: ProviderConfiguration] = [:]
     private let session: URLSession
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "MyFlashcard", category: "AIProviderManager")
+    private var secretChangeObserver: NSObjectProtocol?
 
     private init() {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 60
         self.session = URLSession(configuration: config)
+        AIProviderConfiguration.bootstrapStoredSecrets()
         loadConfigurations()
+        secretChangeObserver = NotificationCenter.default.addObserver(
+            forName: .aiProviderSecretsDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.reloadKeys()
+        }
     }
 
     // MARK: - Configuration Loading
@@ -495,6 +507,19 @@ final class AIProviderManager {
             )
             configurations[id] = config
         }
+
+        logConfigurationState(reason: "load")
+    }
+
+    private func logConfigurationState(reason: String) {
+        let summary = configurations
+            .sorted { $0.key.rawValue < $1.key.rawValue }
+            .map { id, config in
+                "\(id.rawValue):enabled=\(config.isEnabled) keys=\(config.keys.count) available=\(config.hasAvailableKeys)"
+            }
+            .joined(separator: " | ")
+
+        logger.debug("ai_config reason=\(reason, privacy: .public) \(summary, privacy: .public)")
     }
 
     // MARK: - Public API
@@ -507,7 +532,15 @@ final class AIProviderManager {
         maxTokens: Int? = nil,
         temperature: Double? = nil
     ) async throws -> AIProviderResponse {
-        let sortedProviders = sortedAvailableProviders(preferred: preferredProvider)
+        var sortedProviders = sortedAvailableProviders(preferred: preferredProvider)
+
+        // Falls keine Provider verfuegbar sind: einmal frisch aus Keychain/Info.plist
+        // neu laden, bevor wir aufgeben. Deckt den Fall ab, dass ein API-Key erst
+        // nach dem App-Start gespeichert wurde, ohne dass reloadKeys() aufgerufen wurde.
+        if sortedProviders.isEmpty {
+            reloadKeys()
+            sortedProviders = sortedAvailableProviders(preferred: preferredProvider)
+        }
 
         guard !sortedProviders.isEmpty else {
             throw AIProviderError.noAvailableProvider
@@ -683,14 +716,22 @@ final class AIProviderManager {
     // MARK: - Provider Sorting
 
     private func sortedAvailableProviders(preferred: AIProviderIdentifier?) -> [AIProviderIdentifier] {
+        // Wichtig: Ein Provider mit gueltigem, verfuegbarem Key darf NIE allein wegen
+        // eines veralteten/fehlgeschlagenen Health-Checks ausgeschlossen werden.
+        // Der Health-Status dient nur zur Priorisierung (bessere Provider zuerst),
+        // nicht als hartes Ausschlusskriterium - sonst kann ein einzelner
+        // fehlgeschlagener Health-Check (z.B. Cold-Start ohne Netzwerk) den Provider
+        // dauerhaft sperren, obwohl der eigentliche Chat-Request funktionieren wuerde.
         var available = configurations
-            .filter {
-                let config = $0.value
-                let healthUnknown = config.health.lastChecked == nil
-                return config.isEnabled && config.hasAvailableKeys && (healthUnknown || config.health.isHealthy)
+        .filter { $0.value.isEnabled && $0.value.hasAvailableKeys }
+        .sorted { lhs, rhs in
+            if lhs.value.priority != rhs.value.priority {
+                return lhs.value.priority < rhs.value.priority
             }
-            .sorted { $0.value.priority < $1.value.priority }
-            .map { $0.key }
+            // Bei gleicher Prioritaet: gesunde Provider zuerst, aber nichts ausschliessen
+            return lhs.value.health.isHealthy && !rhs.value.health.isHealthy
+        }
+        .map { $0.key }
 
         // Bevorzugten Provider nach vorne
         if let preferred, available.contains(preferred) {
@@ -825,6 +866,13 @@ final class AIProviderManager {
     /// Manuell einen API-Key fuer einen Provider hinzufuegen
     func addKey(_ key: String, for provider: AIProviderIdentifier) {
         guard !key.isEmpty else { return }
+        if let plistKeyName = AIProviderConfiguration.plistKeyNames[provider] {
+            do {
+                try KeychainService.shared.save(key, for: plistKeyName)
+            } catch {
+                logger.error("save_key_failed provider=\(provider.rawValue, privacy: .public) error=\(error.localizedDescription, privacy: .public)")
+            }
+        }
         if configurations[provider] == nil {
             configurations[provider] = ProviderConfiguration(
                 identifier: provider,
@@ -838,7 +886,7 @@ final class AIProviderManager {
         configurations[provider]?.isEnabled = true
     }
 
-    /// Keys aus Keychain neu laden
+    /// Keys aus Keychain und Info.plist neu laden
     func reloadKeys() {
         loadConfigurations()
     }

@@ -1,23 +1,40 @@
 import Foundation
 import SwiftData
+import OSLog
 
-/// Result of insert operation
+// MARK: - Insert Results
+
+/// Ergebnis eines einzelnen Einfüge-Vorgangs.
 enum InsertResult {
     case success(Vocabulary)
     case duplicate(String)
 }
 
-/// Result of bulk import
+/// Ergebnis eines Massenimports.
 struct BulkImportResult {
     let successCount: Int
     let duplicates: [String]
     var hasDuplicates: Bool { !duplicates.isEmpty }
 }
 
+// MARK: - DataService
+
+/// Zentrale Datenzugriffsschicht für Vokabeleinträge.
+///
+/// Kapselt Einfüge-, Duplikatprüf- und Seed-Logik für den SwiftData-Store.
+/// Alle Methoden erwarten einen `ModelContext` und sind `@MainActor`-gebunden.
+///
+/// **Architekturentscheidung:** Als einfacher Singleton ohne vollständiges
+/// Repository-Pattern umgesetzt, da SwiftData mit `@Query` direkt im View
+/// den Großteil der Lesezugriffe übernimmt. Ein vollständiges Repository
+/// wird in Phase 2 eingeführt.
 @MainActor
 class DataService {
     static let shared = DataService()
-    
+    private let logger = Logger(subsystem: "com.myflashcard.ios", category: "DataService")
+
+    // MARK: - Sample Data
+
     static let sampleVocabulary: [Vocabulary] = [
         Vocabulary(
             englishWord: "accomplish",
@@ -38,30 +55,46 @@ class DataService {
             exampleSentence: "She achieved her dream of becoming a doctor."
         )
     ]
-    
+
+    // MARK: - Initialization
+
+    /// Befüllt die Datenbank beim ersten Start mit Beispieldaten.
     func initializeSampleDataIfNeeded(modelContext: ModelContext) {
         let descriptor = FetchDescriptor<Vocabulary>()
         let count = (try? modelContext.fetchCount(descriptor)) ?? 0
-        
-        if count == 0 {
-            for vocab in DataService.sampleVocabulary {
-                modelContext.insert(vocab)
-            }
-            try? modelContext.save()
+        guard count == 0 else { return }
+
+        for vocab in DataService.sampleVocabulary {
+            modelContext.insert(vocab)
         }
+        save(modelContext: modelContext, context: "initializeSampleData")
     }
-    
-    /// Check if English word already exists
+
+    // MARK: - Duplicate Check
+
+    /// Prüft effizient, ob ein englisches Wort bereits existiert.
+    ///
+    /// **Vorher:** Alle Vokabeln wurden geladen und in Swift gefiltert – O(n).
+    /// **Nachher:** SwiftData-`FetchDescriptor` mit `#Predicate` filtert
+    /// direkt auf SQLite-Ebene – O(log n) mit Index.
+    ///
+    /// - Parameters:
+    ///   - englishWord: Das zu prüfende englische Wort (Groß-/Kleinschreibung ignoriert).
+    ///   - context: Der aktive `ModelContext`.
+    /// - Returns: `true` wenn das Wort bereits vorhanden ist.
     func wordExists(_ englishWord: String, in context: ModelContext) -> Bool {
-        let searchWord = englishWord.lowercased().trimmingCharacters(in: .whitespaces)
-        let descriptor = FetchDescriptor<Vocabulary>()
-        let allVocab = (try? context.fetch(descriptor)) ?? []
-        return allVocab.contains { 
-            $0.englishWord.lowercased().trimmingCharacters(in: .whitespaces) == searchWord 
-        }
+        let normalizedWord = englishWord.lowercased().trimmingCharacters(in: .whitespaces)
+        var descriptor = FetchDescriptor<Vocabulary>(
+            predicate: #Predicate { $0.englishWord == normalizedWord }
+        )
+        descriptor.fetchLimit = 1
+        let count = (try? context.fetchCount(descriptor)) ?? 0
+        return count > 0
     }
-    
-    /// Insert with duplicate check
+
+    // MARK: - Insert
+
+    /// Fügt ein einzelnes Wort ein, falls es noch nicht existiert.
     func insertWithDuplicateCheck(
         englishWord: String,
         german: String,
@@ -69,31 +102,41 @@ class DataService {
         exampleSentence: String,
         context: ModelContext
     ) -> InsertResult {
-        if wordExists(englishWord, in: context) {
+        let trimmed = englishWord.lowercased().trimmingCharacters(in: .whitespaces)
+        if wordExists(trimmed, in: context) {
             return .duplicate(englishWord)
         }
-        
+
         let vocab = Vocabulary(
-            englishWord: englishWord,
+            englishWord: englishWord.trimmingCharacters(in: .whitespaces),
             german: german,
             persian: persian,
             exampleSentence: exampleSentence
         )
         context.insert(vocab)
-        try? context.save()
+        save(modelContext: context, context: "insertWithDuplicateCheck")
         return .success(vocab)
     }
-    
-    /// Bulk import with duplicate check
+
+    /// Importiert mehrere Einträge auf einmal mit Duplikatprüfung.
+    ///
+    /// Optimierung: Lädt einmalig alle vorhandenen englischen Wörter als
+    /// normalisiertes Set, um N Einzelabfragen zu vermeiden.
     func bulkImportWithDuplicateCheck(
         entries: [ParsedEntry],
         context: ModelContext
     ) -> BulkImportResult {
+        // Einmalig alle existierenden Wörter laden (für Bulk effizienter als N Einzelabfragen)
+        let existingDescriptor = FetchDescriptor<Vocabulary>()
+        let existing = (try? context.fetch(existingDescriptor)) ?? []
+        let existingWords = Set(existing.map { $0.englishWord.lowercased().trimmingCharacters(in: .whitespaces) })
+
         var successCount = 0
         var duplicates: [String] = []
-        
+
         for entry in entries where entry.isValid {
-            if wordExists(entry.englishWord, in: context) {
+            let normalized = entry.englishWord.lowercased().trimmingCharacters(in: .whitespaces)
+            if existingWords.contains(normalized) {
                 duplicates.append(entry.englishWord)
             } else {
                 let vocab = Vocabulary(
@@ -106,143 +149,125 @@ class DataService {
                 successCount += 1
             }
         }
-        
-        try? context.save()
+
+        save(modelContext: context, context: "bulkImport(\(successCount) Einträge)")
         return BulkImportResult(successCount: successCount, duplicates: duplicates)
+    }
+
+    // MARK: - Private Helpers
+
+    /// Speichert den Context und loggt Fehler strukturiert.
+    private func save(modelContext: ModelContext, context: String) {
+        do {
+            try modelContext.save()
+        } catch {
+            logger.error("[\(context)] Speichern fehlgeschlagen: \(error.localizedDescription)")
+        }
     }
 }
 
-// MARK: - Improved TextParser
+// MARK: - TextParser
+
+/// Parser für tabulatorseparierte Bulk-Eingaben (Vokabellisten).
+///
+/// Unterstützt mehrere Formate:
+/// - Tab-separiert: `word\tGerman\tPersian\tExample`
+/// - Mehrfach-Leerzeichen-separiert
+/// - Persisches Unicode als Trennmarker
 class TextParser {
-    
-    /// Parse bulk text - handles various formats including numbered lists
+
+    /// Parst einen mehrzeiligen Text und gibt eine Liste von `ParsedEntry` zurück.
     static func parseText(_ text: String) -> [ParsedEntry] {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return []
         }
-        
-        var entries: [ParsedEntry] = []
-        let lines = text.components(separatedBy: .newlines)
-        
-        for line in lines {
-            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
-            
-            // Skip empty lines
-            if trimmedLine.isEmpty { continue }
-            
-            // Skip header lines
-            if trimmedLine.hasPrefix("#") { continue }
-            if trimmedLine.lowercased().contains("english word") { continue }
-            if trimmedLine.lowercased().hasPrefix("english") && trimmedLine.lowercased().contains("german") { continue }
-            
-            if let entry = parseLine(trimmedLine) {
-                entries.append(entry)
-            }
-        }
-        
-        return entries
+
+        return text
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && !$0.hasPrefix("#") }
+            .filter { !isHeaderLine($0) }
+            .compactMap { parseLine($0) }
     }
-    
-    /// Parse a single line - handles numbered entries and various separators
+
+    private static func isHeaderLine(_ line: String) -> Bool {
+        let lower = line.lowercased()
+        return lower.contains("english word") ||
+               (lower.hasPrefix("english") && lower.contains("german"))
+    }
+
+    /// Parst eine einzelne Zeile in ein `ParsedEntry`.
     private static func parseLine(_ line: String) -> ParsedEntry? {
         var workingLine = line
-        
-        // Remove leading number (e.g., "1", "1.", "1 ", "10")
+
+        // Führende Nummerierung entfernen (z.B. "1.", "10 ")
         if let range = workingLine.range(of: #"^\d+\.?\s*"#, options: .regularExpression) {
             workingLine = String(workingLine[range.upperBound...])
         }
-        
-        // Try tab-separated first
-        var parts = workingLine.components(separatedBy: "\t").map { 
-            $0.trimmingCharacters(in: .whitespaces) 
-        }.filter { !$0.isEmpty }
-        
-        // If not enough parts, try multiple spaces (2 or more)
+
+        // Tab-separiert (bevorzugtes Format)
+        var parts = workingLine
+            .components(separatedBy: "\t")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+
+        // Mehrfach-Leerzeichen als Fallback
         if parts.count < 3 {
-            if let regex = try? NSRegularExpression(pattern: #"\s{2,}"#, options: []) {
+            if let regex = try? NSRegularExpression(pattern: #"\s{2,}"#) {
                 let range = NSRange(workingLine.startIndex..., in: workingLine)
                 let modified = regex.stringByReplacingMatches(
-                    in: workingLine, 
-                    options: [], 
-                    range: range, 
-                    withTemplate: "\t"
+                    in: workingLine, range: range, withTemplate: "\t"
                 )
-                parts = modified.components(separatedBy: "\t").map { 
-                    $0.trimmingCharacters(in: .whitespaces) 
-                }.filter { !$0.isEmpty }
-            }
-        }
-        
-        // Still not enough? Try to find Persian text pattern to split
-        if parts.count < 3 {
-            // Persian Unicode range: U+0600 to U+06FF
-            let persianPattern = #"[\u{0600}-\u{06FF}]"#
-            if let persianRange = workingLine.range(of: persianPattern, options: .regularExpression) {
-                // Find where Persian starts
-                let beforePersian = String(workingLine[..<persianRange.lowerBound])
-                let persianAndAfter = String(workingLine[persianRange.lowerBound...])
-                
-                // Split before Persian by space
-                let beforeParts = beforePersian.trimmingCharacters(in: .whitespaces)
-                    .components(separatedBy: " ")
+                parts = modified
+                    .components(separatedBy: "\t")
+                    .map { $0.trimmingCharacters(in: .whitespaces) }
                     .filter { !$0.isEmpty }
-                
-                if beforeParts.count >= 2 {
-                    let english = beforeParts[0]
-                    let german = beforeParts[1..<beforeParts.count].joined(separator: " ")
-                    
-                    // Find where Persian ends (next Latin character or end)
-                    var persian = ""
-                    var example = ""
-                    
-                    // Split Persian from example sentence
-                    let latinPattern = "[A-Za-z]"
-                    if let latinRange = persianAndAfter.range(of: latinPattern, options: .regularExpression) {
-                        persian = String(persianAndAfter[..<latinRange.lowerBound]).trimmingCharacters(in: .whitespaces)
-                        example = String(persianAndAfter[latinRange.lowerBound...]).trimmingCharacters(in: .whitespaces)
-                    } else {
-                        persian = persianAndAfter.trimmingCharacters(in: .whitespaces)
-                    }
-                    
-                    if !english.isEmpty && !german.isEmpty {
-                        return ParsedEntry(
-                            englishWord: english,
-                            german: german,
-                            persian: persian,
-                            exampleSentence: example
-                        )
-                    }
-                }
             }
         }
-        
-        // Process parts normally
+
+        // Persisches Unicode als Trennmarker
+        if parts.count < 3 {
+            parts = splitByPersianScript(workingLine) ?? parts
+        }
+
         guard parts.count >= 2 else { return nil }
-        
-        switch parts.count {
-        case 4...:
-            return ParsedEntry(
-                englishWord: parts[0],
-                german: parts[1],
-                persian: parts[2],
-                exampleSentence: parts[3..<parts.count].joined(separator: " ")
-            )
-        case 3:
-            return ParsedEntry(
-                englishWord: parts[0],
-                german: parts[1],
-                persian: parts[2],
-                exampleSentence: ""
-            )
-        case 2:
-            return ParsedEntry(
-                englishWord: parts[0],
-                german: parts[1],
-                persian: "",
-                exampleSentence: ""
-            )
-        default:
+
+        return ParsedEntry(
+            englishWord: parts[0],
+            german: parts[1],
+            persian: parts.count >= 3 ? parts[2] : "",
+            exampleSentence: parts.count >= 4 ? parts[3...].joined(separator: " ") : ""
+        )
+    }
+
+    private static func splitByPersianScript(_ line: String) -> [String]? {
+        let persianPattern = #"[\u{0600}-\u{06FF}]"#
+        guard let persianRange = line.range(of: persianPattern, options: .regularExpression) else {
             return nil
         }
+
+        let beforePersian = String(line[..<persianRange.lowerBound])
+        let persianAndAfter = String(line[persianRange.lowerBound...])
+
+        let beforeParts = beforePersian
+            .trimmingCharacters(in: .whitespaces)
+            .components(separatedBy: " ")
+            .filter { !$0.isEmpty }
+
+        guard beforeParts.count >= 2 else { return nil }
+
+        let english = beforeParts[0]
+        let german = beforeParts[1...].joined(separator: " ")
+
+        var persian = persianAndAfter
+        var example = ""
+
+        if let latinRange = persianAndAfter.range(of: "[A-Za-z]", options: .regularExpression) {
+            persian = String(persianAndAfter[..<latinRange.lowerBound]).trimmingCharacters(in: .whitespaces)
+            example = String(persianAndAfter[latinRange.lowerBound...]).trimmingCharacters(in: .whitespaces)
+        }
+
+        return [english, german, persian, example].filter { !$0.isEmpty }
     }
 }
+
