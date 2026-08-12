@@ -17,6 +17,14 @@ struct BulkImportResult {
     var hasDuplicates: Bool { !duplicates.isEmpty }
 }
 
+struct JSONBulkImportResult {
+    let insertedCount: Int
+    let overwrittenCount: Int
+    let skippedDuplicates: [String]
+
+    var importedCount: Int { insertedCount + overwrittenCount }
+}
+
 // MARK: - DataService
 
 /// Zentrale Datenzugriffsschicht für Vokabeleinträge.
@@ -151,6 +159,63 @@ class DataService {
 
         save(modelContext: context, context: "bulkImport(\(successCount) Einträge)")
         return BulkImportResult(successCount: successCount, duplicates: duplicates)
+    }
+
+    /// Importiert JSON-Einträge schlüsselbasiert mit konfigurierbarer Duplikatstrategie.
+    func bulkImportJSONWithDuplicateCheck(
+        entries: [ImportedVocabEntry],
+        duplicateStrategy: VocabDuplicateStrategy,
+        context: ModelContext
+    ) -> JSONBulkImportResult {
+        let existingDescriptor = FetchDescriptor<Vocabulary>()
+        let existing = (try? context.fetch(existingDescriptor)) ?? []
+        var existingByWord: [String: Vocabulary] = [:]
+        for vocab in existing {
+            let key = vocab.englishWord.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+            existingByWord[key] = vocab
+        }
+
+        var insertedCount = 0
+        var overwrittenCount = 0
+        var skippedDuplicates: [String] = []
+
+        for entry in entries {
+            let normalized = entry.english_word.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+            if let existingVocab = existingByWord[normalized] {
+                switch duplicateStrategy {
+                case .skip:
+                    skippedDuplicates.append(entry.english_word)
+                case .overwrite:
+                    existingVocab.englishWord = entry.english_word
+                    existingVocab.feature = entry.feature
+                    existingVocab.german = entry.german
+                    existingVocab.persian = entry.persian
+                    existingVocab.exampleSentence = entry.example_sentence
+                    existingVocab.persianTranslation = entry.persian_translation
+                    overwrittenCount += 1
+                }
+                continue
+            }
+
+            let vocab = Vocabulary(
+                englishWord: entry.english_word,
+                feature: entry.feature,
+                german: entry.german,
+                persian: entry.persian,
+                exampleSentence: entry.example_sentence,
+                persianTranslation: entry.persian_translation
+            )
+            context.insert(vocab)
+            existingByWord[normalized] = vocab
+            insertedCount += 1
+        }
+
+        save(modelContext: context, context: "bulkImportJSON(inserted:\(insertedCount), overwritten:\(overwrittenCount))")
+        return JSONBulkImportResult(
+            insertedCount: insertedCount,
+            overwrittenCount: overwrittenCount,
+            skippedDuplicates: skippedDuplicates
+        )
     }
 
     // MARK: - Private Helpers

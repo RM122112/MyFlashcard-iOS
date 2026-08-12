@@ -149,7 +149,7 @@ struct SimpleFlashcard: View {
                     
                     // Persian with RTL
                     HStack {
-                        Text("FA")
+                        Text("🇦🇫")
                             .font(.title)
                         Text(card.persian)
                             .font(.title2)

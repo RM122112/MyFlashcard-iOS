@@ -1,185 +1,162 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct InputView: View {
     @Environment(\.modelContext) private var modelContext
-    @StateObject private var speechService = SpeechService.shared
     @FocusState private var isTextEditorFocused: Bool
-    
-    @State private var bulkText = ""
-    @State private var parsedEntries: [ParsedEntry] = []
-    @State private var showPreview = false
-    @State private var showSuccess = false
-    @State private var successMessage = ""
-    @State private var showError = false
-    @State private var errorMessage = ""
-    
+
+    @State private var viewModel = InputViewModel()
+    @State private var showFileImporter = false
+
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
-                    // Instructions
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("📝 Mehrere Wörter importieren")
-                            .font(.headline)
-                        Text("Füge eine Vokabelliste in diesem Format ein:")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Text("English  German  Persian  Example")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .padding(8)
-                            .background(Color.gray.opacity(0.1))
-                            .cornerRadius(8)
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("JSON-Vokabelimport")
+                        .font(.headline)
+                    Text("Importiere eine .json-Datei oder füge JSON-Text ein. Vor dem Speichern wird eine tabellarische Vorschau angezeigt.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    Picker("Duplikate", selection: $viewModel.duplicateStrategy) {
+                        ForEach(VocabDuplicateStrategy.allCases) { strategy in
+                            Text(strategy.rawValue).tag(strategy)
+                        }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal)
-                    
-                    // Text Input with keyboard dismissal
-                    TextEditor(text: $bulkText)
-                        .frame(minHeight: 200)
-                        .padding(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                        )
-                        .padding(.horizontal)
-                        .focused($isTextEditorFocused)
-                    
-                    // Dismiss Keyboard Button
-                    if isTextEditorFocused {
-                        Button(action: {
-                            isTextEditorFocused = false
-                        }) {
-                            Label("Tastatur ausblenden", systemImage: "keyboard.chevron.compact.down")
+                    .pickerStyle(.segmented)
+
+                    HStack(spacing: 10) {
+                        Button {
+                            showFileImporter = true
+                        } label: {
+                            Label("JSON-Datei wählen", systemImage: "doc.badge.plus")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.bordered)
-                        .padding(.horizontal)
-                    }
-                    
-                    // Parse Button
-                    Button(action: {
-                        isTextEditorFocused = false // Dismiss keyboard
-                        parseText()
-                    }) {
-                        Label("Importvorschau anzeigen", systemImage: "doc.text.magnifyingglass")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .padding(.horizontal)
-                    .disabled(bulkText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    
-                    // Preview
-                    if showPreview && !parsedEntries.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Vorschau (\(parsedEntries.count) Einträge)")
-                                .font(.headline)
-                            
-                            ForEach(parsedEntries) { entry in
-                                HStack {
-                                    VStack(alignment: .leading) {
-                                        HStack {
-                                            Text(entry.englishWord)
-                                                .fontWeight(.semibold)
-                                            Button(action: {
-                                                speechService.speak(entry.englishWord)
-                                            }) {
-                                                Image(systemName: "speaker.wave.2.fill")
-                                                    .foregroundColor(.blue)
-                                            }
-                                            .buttonStyle(.borderless)
-                                        }
-                                        Text("🇩🇪 \(entry.german)")
-                                            .font(.caption)
-                                        Text("FA \(entry.persian)")
-                                            .font(.caption)
-                                            .environment(\.layoutDirection, .rightToLeft)
-                                    }
-                                    Spacer()
-                                    if entry.isValid {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundColor(.green)
-                                    } else {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundColor(.red)
-                                    }
-                                }
-                                .padding()
-                                .background(Color.gray.opacity(0.1))
-                                .cornerRadius(8)
-                            }
-                            
-                            Button(action: importEntries) {
-                                Label("Alle importieren", systemImage: "square.and.arrow.down")
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(.green)
+
+                        Button {
+                            isTextEditorFocused = false
+                            viewModel.parseJSONTextForPreview()
+                        } label: {
+                            Label("JSON prüfen", systemImage: "doc.text.magnifyingglass")
+                                .frame(maxWidth: .infinity)
                         }
-                        .padding(.horizontal)
+                        .buttonStyle(.borderedProminent)
+                    }
+
+                    TextEditor(text: $viewModel.jsonText)
+                        .font(.system(.footnote, design: .monospaced))
+                        .frame(minHeight: 220)
+                        .padding(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.gray.opacity(0.28), lineWidth: 1)
+                        )
+                        .focused($isTextEditorFocused)
+
+                    if isTextEditorFocused {
+                        Button("Tastatur ausblenden") {
+                            isTextEditorFocused = false
+                        }
+                        .buttonStyle(.bordered)
+                    }
+
+                    if !viewModel.importIssues.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Fehler / Hinweise")
+                                .font(.headline)
+                            ForEach(viewModel.importIssues) { issue in
+                                Text("• \(issue.message)")
+                                    .font(.footnote)
+                                    .foregroundStyle(.red)
+                            }
+                        }
+                    }
+
+                    if !viewModel.importedEntries.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Vorschau (\(viewModel.importedEntries.count) gültige Einträge)")
+                                .font(.headline)
+                            ImportedVocabPreviewTable(entries: viewModel.importedEntries)
+
+                            if !viewModel.duplicateWords.isEmpty {
+                                Text("Erkannte Duplikate: \(viewModel.duplicateWords.joined(separator: ", "))")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            HStack(spacing: 10) {
+                                Button {
+                                    viewModel.importPreviewEntries(modelContext: modelContext)
+                                } label: {
+                                    Label("In SwiftData übernehmen", systemImage: "square.and.arrow.down")
+                                        .frame(maxWidth: .infinity)
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .disabled(viewModel.isSaving)
+
+                                Button("Abbrechen") {
+                                    viewModel.clearJSONImport()
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                        }
                     }
                 }
-                .padding(.vertical)
+                .padding()
             }
-            .scrollDismissesKeyboard(.interactively) // Dismiss keyboard on scroll
             .navigationTitle("➕ Wörter hinzufügen")
+            .fileImporter(
+                isPresented: $showFileImporter,
+                allowedContentTypes: [.json, .plainText],
+                allowsMultipleSelection: false
+            ) { result in
+                handleFileImport(result)
+            }
+            .alert("Import abgeschlossen", isPresented: $viewModel.showSuccessAlert) {
+                Button("OK") {
+                    viewModel.clearJSONImport()
+                }
+            } message: {
+                Text(viewModel.successMessage)
+            }
+            .alert("Fehler", isPresented: Binding(
+                get: { viewModel.error != nil },
+                set: { if !$0 { viewModel.error = nil } }
+            )) {
+                Button("OK", role: .cancel) { viewModel.error = nil }
+            } message: {
+                Text(viewModel.error ?? "")
+            }
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Fertig") {
-                        isTextEditorFocused = false
-                    }
+                    Button("Fertig") { isTextEditorFocused = false }
                 }
-            }
-            .alert("✅ Import erfolgreich", isPresented: $showSuccess) {
-                Button("OK") {
-                    bulkText = ""
-                    parsedEntries = []
-                    showPreview = false
-                }
-            } message: {
-                Text(successMessage)
-            }
-            .alert("⚠️ Doppelte Einträge gefunden", isPresented: $showError) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(errorMessage)
             }
         }
     }
-    
-    private func parseText() {
-        parsedEntries = TextParser.parseText(bulkText)
-        showPreview = true
-    }
-    
-    private func importEntries() {
-        let validEntries = parsedEntries.filter { $0.isValid }
-        
-        // Check if all are duplicates
-        if validEntries.isEmpty {
-            errorMessage = "Es wurden keine gültigen Einträge zum Import gefunden."
-            showError = true
-            return
-        }
-        
-        let result = DataService.shared.bulkImportWithDuplicateCheck(
-            entries: validEntries,
-            context: modelContext
-        )
-        
-        // Show results
-        if result.successCount > 0 {
-            successMessage = "\(result.successCount) Wörter wurden erfolgreich importiert."
-            if result.hasDuplicates {
-                successMessage += "\n\n\(result.duplicates.count) doppelte Einträge wurden übersprungen."
+
+    private func handleFileImport(_ result: Result<[URL], Error>) {
+        switch result {
+        case let .success(urls):
+            guard let url = urls.first else { return }
+            let hasAccess = url.startAccessingSecurityScopedResource()
+            defer {
+                if hasAccess {
+                    url.stopAccessingSecurityScopedResource()
+                }
             }
-            showSuccess = true
-        } else if result.hasDuplicates {
-            // All were duplicates - show error only
-            errorMessage = "Alle Einträge sind bereits vorhanden:\n\(result.duplicates.joined(separator: ", "))"
-            showError = true
+            do {
+                let data = try Data(contentsOf: url)
+                viewModel.jsonText = String(data: data, encoding: .utf8) ?? ""
+                viewModel.parseJSONDataForPreview(data)
+            } catch {
+                viewModel.error = "Datei konnte nicht gelesen werden: \(error.localizedDescription)"
+            }
+        case let .failure(error):
+            viewModel.error = "Dateiauswahl fehlgeschlagen: \(error.localizedDescription)"
         }
     }
 }

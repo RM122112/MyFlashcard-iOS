@@ -86,7 +86,7 @@ struct ClozeQuizView: View {
                 // Translations as hint
                 VStack(spacing: 4) {
                     Text("🇩🇪 \(q.vocab.german)")
-                    Text("FA \(q.vocab.persian)")
+                    Text("🇦🇫 \(q.vocab.persian)")
                         .environment(\.layoutDirection, .rightToLeft)
                 }
                 .font(.subheadline)

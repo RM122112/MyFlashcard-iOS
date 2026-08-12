@@ -47,6 +47,9 @@
 		209B /* PDFLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 209A /* PDFLibraryService.swift */; };
 		210B /* PDFLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210A /* PDFLibraryView.swift */; };
 		211B /* AppPreviewFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 211A /* AppPreviewFile.swift */; };
+		212B /* ImportedVocabEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 212A /* ImportedVocabEntry.swift */; };
+		213B /* VocabJSONImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 213A /* VocabJSONImportService.swift */; };
+		214B /* ImportedVocabPreviewTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 214A /* ImportedVocabPreviewTable.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -93,6 +96,9 @@
 		209A /* PDFLibraryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFLibraryService.swift; sourceTree = "<group>"; };
 		210A /* PDFLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFLibraryView.swift; sourceTree = "<group>"; };
 		211A /* AppPreviewFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreviewFile.swift; sourceTree = "<group>"; };
+		212A /* ImportedVocabEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportedVocabEntry.swift; sourceTree = "<group>"; };
+		213A /* VocabJSONImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabJSONImportService.swift; sourceTree = "<group>"; };
+		214A /* ImportedVocabPreviewTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportedVocabPreviewTable.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -144,6 +150,7 @@
 				206A /* TextAnalysisModels.swift */,
 				207A /* GrammarRecommendationStore.swift */,
 				208A /* LearningProgress.swift */,
+				212A /* ImportedVocabEntry.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -167,6 +174,7 @@
 				123 /* DictionaryDetailView.swift */,
 				210A /* PDFLibraryView.swift */,
 				211A /* AppPreviewFile.swift */,
+				214A /* ImportedVocabPreviewTable.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -197,6 +205,7 @@
 				129 /* KeychainService.swift */,
 				130 /* AIProviderConfiguration.swift */,
 				209A /* PDFLibraryService.swift */,
+				213A /* VocabJSONImportService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -299,6 +308,9 @@
 				209B /* PDFLibraryService.swift in Sources */,
 				210B /* PDFLibraryView.swift in Sources */,
 				211B /* AppPreviewFile.swift in Sources */,
+				212B /* ImportedVocabEntry.swift in Sources */,
+				213B /* VocabJSONImportService.swift in Sources */,
+				214B /* ImportedVocabPreviewTable.swift in Sources */,
 				009 /* DataService.swift in Sources */,
 				011 /* SpeechService.swift in Sources */,
 				012 /* SynonymsView.swift in Sources */,

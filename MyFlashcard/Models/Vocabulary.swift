@@ -75,9 +75,11 @@ enum LearningStatusHelper {
 final class Vocabulary {
     var id: UUID = UUID()
     var englishWord: String = ""
+    var feature: String = "_"
     var german: String = ""
     var persian: String = ""
     var exampleSentence: String = ""
+    var persianTranslation: String = ""
     var timesReviewed: Int = 0
     var timesCorrect: Int = 0
     var lastReviewedAt: Date?
@@ -107,9 +109,11 @@ final class Vocabulary {
 
     init(
         englishWord: String,
+        feature: String = "_",
         german: String,
         persian: String,
         exampleSentence: String = "",
+        persianTranslation: String = "",
         timesReviewed: Int = 0,
         timesCorrect: Int = 0,
         lastReviewedAt: Date? = nil,
@@ -128,9 +132,11 @@ final class Vocabulary {
     ) {
         self.id = UUID()
         self.englishWord = englishWord
+        self.feature = feature
         self.german = german
         self.persian = persian
         self.exampleSentence = exampleSentence
+        self.persianTranslation = persianTranslation
         self.timesReviewed = timesReviewed
         self.timesCorrect = timesCorrect
         self.lastReviewedAt = lastReviewedAt
@@ -243,6 +249,5 @@ struct ParsedSynonymEntry: Identifiable {
         !mainWord.isEmpty && !german.isEmpty
     }
 }
-
 
 

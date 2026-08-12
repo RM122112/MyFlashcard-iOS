@@ -1,12 +1,6 @@
-import SwiftUI
+import Foundation
 import SwiftData
 
-// MARK: - InputViewModel
-
-/// ViewModel für den Eingabe-Screen (Einzeleingabe und Massenimport).
-///
-/// Verwaltet Formularfelder, Validierung, Speichern und Bulk-Import-Parsing.
-/// Die eigentliche Persistenz erfolgt über `ModelContext`.
 @MainActor
 @Observable
 class InputViewModel {
@@ -18,11 +12,13 @@ class InputViewModel {
     var persian: String = ""
     var exampleSentence: String = ""
 
-    // MARK: - Bulk Import
+    // MARK: - JSON Import
 
-    var bulkText: String = ""
-    var isBulkMode: Bool = true
-    var parsedEntries: [ParsedEntry] = []
+    var jsonText: String = ""
+    var importedEntries: [ImportedVocabEntry] = []
+    var importIssues: [VocabImportIssue] = []
+    var duplicateWords: [String] = []
+    var duplicateStrategy: VocabDuplicateStrategy = .skip
 
     // MARK: - State
 
@@ -31,19 +27,82 @@ class InputViewModel {
     var isSaving: Bool = false
     var error: String?
     var importedCount: Int = 0
+    var overwrittenCount: Int = 0
+    var skippedDuplicateCount: Int = 0
     var showSuccessAlert: Bool = false
+    var successMessage: String = ""
 
-    // MARK: - Mode
+    private let importService = VocabJSONImportService.shared
 
-    func toggleMode() {
-        isBulkMode.toggle()
+    func setJSONText(_ text: String) {
+        jsonText = text
         error = nil
     }
 
-    func setBulkText(_ text: String) {
-        bulkText = text
+    func parseJSONTextForPreview() {
+        let trimmed = jsonText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            importedEntries = []
+            importIssues = [VocabImportIssue(englishWord: "<json>", message: "Bitte JSON-Text eingeben.")]
+            duplicateWords = []
+            return
+        }
+
+        guard let data = trimmed.data(using: .utf8) else {
+            importedEntries = []
+            importIssues = [VocabImportIssue(englishWord: "<json>", message: "JSON konnte nicht als UTF-8 gelesen werden.")]
+            duplicateWords = []
+            return
+        }
+        parseJSONDataForPreview(data)
+    }
+
+    func parseJSONDataForPreview(_ data: Data) {
+        let report = importService.importVocabWithReport(from: data, duplicateStrategy: duplicateStrategy)
+        importedEntries = report.entries
+        importIssues = report.issues
+        duplicateWords = report.duplicates
         error = nil
-        parsedEntries = TextParser.parseText(text)
+    }
+
+    func importPreviewEntries(modelContext: ModelContext) {
+        guard !importedEntries.isEmpty else {
+            error = "Es gibt keine gültigen Einträge zum Import."
+            return
+        }
+
+        isSaving = true
+        let result = DataService.shared.bulkImportJSONWithDuplicateCheck(
+            entries: importedEntries,
+            duplicateStrategy: duplicateStrategy,
+            context: modelContext
+        )
+        isSaving = false
+
+        importedCount = result.insertedCount
+        overwrittenCount = result.overwrittenCount
+        skippedDuplicateCount = result.skippedDuplicates.count
+
+        var parts: [String] = []
+        if result.insertedCount > 0 {
+            parts.append("\(result.insertedCount) neu importiert")
+        }
+        if result.overwrittenCount > 0 {
+            parts.append("\(result.overwrittenCount) überschrieben")
+        }
+        if result.skippedDuplicates.count > 0 {
+            parts.append("\(result.skippedDuplicates.count) Duplikate übersprungen")
+        }
+        successMessage = parts.isEmpty ? "Keine Änderungen durchgeführt." : parts.joined(separator: " · ")
+        showSuccessAlert = true
+    }
+
+    func clearJSONImport() {
+        jsonText = ""
+        importedEntries = []
+        importIssues = []
+        duplicateWords = []
+        error = nil
     }
 
     // MARK: - Editing
@@ -55,50 +114,10 @@ class InputViewModel {
         persian = vocabulary.persian
         exampleSentence = vocabulary.exampleSentence
         isEditing = true
-        isBulkMode = false
     }
 
-    // MARK: - Save
+    // MARK: - Save (single entry)
 
-    /// Importiert alle gültigen Einträge aus dem geparseten Bulk-Text.
-    func importBulk(modelContext: ModelContext) {
-        let validEntries = parsedEntries.filter { $0.isValid }
-
-        guard !validEntries.isEmpty else {
-            error = "Es wurden keine gültigen Einträge zum Import gefunden."
-            return
-        }
-
-        isSaving = true
-        error = nil
-
-        var count = 0
-        for entry in validEntries {
-            let vocabulary = Vocabulary(
-                englishWord: entry.englishWord,
-                german: entry.german,
-                persian: entry.persian,
-                exampleSentence: entry.exampleSentence
-            )
-            modelContext.insert(vocabulary)
-            count += 1
-        }
-
-        do {
-            try modelContext.save()
-        } catch {
-            self.error = "Fehler beim Speichern: \(error.localizedDescription)"
-            print("[InputViewModel] Bulk-Import fehlgeschlagen: \(error)")
-        }
-
-        importedCount = count
-        isSaving = false
-        showSuccessAlert = true
-        clearForm()
-    }
-
-    /// Speichert einen einzelnen Eintrag (neu oder bearbeitet).
-    /// - Returns: `true` bei Erfolg, `false` bei Validierungsfehler.
     @discardableResult
     func save(modelContext: ModelContext) -> Bool {
         guard !englishWord.trimmingCharacters(in: .whitespaces).isEmpty else {
@@ -110,7 +129,7 @@ class InputViewModel {
             return false
         }
         guard !persian.trimmingCharacters(in: .whitespaces).isEmpty else {
-            error = "Bitte gib die persische Übersetzung ein."
+            error = "Bitte gib die 🇦🇫-Übersetzung ein."
             return false
         }
 
@@ -118,15 +137,15 @@ class InputViewModel {
         error = nil
 
         if isEditing, let vocab = editingVocabulary {
-            vocab.englishWord     = englishWord.trimmingCharacters(in: .whitespaces)
-            vocab.german          = german.trimmingCharacters(in: .whitespaces)
-            vocab.persian         = persian.trimmingCharacters(in: .whitespaces)
+            vocab.englishWord = englishWord.trimmingCharacters(in: .whitespaces)
+            vocab.german = german.trimmingCharacters(in: .whitespaces)
+            vocab.persian = persian.trimmingCharacters(in: .whitespaces)
             vocab.exampleSentence = exampleSentence.trimmingCharacters(in: .whitespaces)
         } else {
             let vocabulary = Vocabulary(
                 englishWord: englishWord.trimmingCharacters(in: .whitespaces),
-                german:      german.trimmingCharacters(in: .whitespaces),
-                persian:     persian.trimmingCharacters(in: .whitespaces),
+                german: german.trimmingCharacters(in: .whitespaces),
+                persian: persian.trimmingCharacters(in: .whitespaces),
                 exampleSentence: exampleSentence.trimmingCharacters(in: .whitespaces)
             )
             modelContext.insert(vocabulary)
@@ -137,13 +156,13 @@ class InputViewModel {
         } catch {
             self.error = "Fehler beim Speichern: \(error.localizedDescription)"
             isSaving = false
-            print("[InputViewModel] Speichern fehlgeschlagen: \(error)")
             return false
         }
 
         importedCount = 1
         isSaving = false
         showSuccessAlert = true
+        successMessage = "Eintrag gespeichert."
         clearForm()
         return true
     }
@@ -155,8 +174,6 @@ class InputViewModel {
         german = ""
         persian = ""
         exampleSentence = ""
-        bulkText = ""
-        parsedEntries = []
         isEditing = false
         editingVocabulary = nil
         error = nil
