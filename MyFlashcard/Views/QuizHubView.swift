@@ -6,8 +6,6 @@ struct QuizHubView: View {
 
     enum QuizMode: String, CaseIterable, Identifiable {
         case multipleChoice = "Multiple-Choice"
-        case cloze = "Lückentext"
-        case dictation = "Diktat"
         case srs = "SRS-Wiederholung"
 
         var id: String { rawValue }
@@ -15,8 +13,6 @@ struct QuizHubView: View {
         var icon: String {
             switch self {
             case .multipleChoice: return "list.bullet.clipboard"
-            case .cloze: return "text.badge.checkmark"
-            case .dictation: return "waveform.circle"
             case .srs: return "brain.head.profile"
             }
         }
@@ -24,8 +20,6 @@ struct QuizHubView: View {
         var description: String {
             switch self {
             case .multipleChoice: return "Wähle die richtige Übersetzung"
-            case .cloze: return "Ergänze das fehlende Wort"
-            case .dictation: return "Höre das Wort und tippe es ein"
             case .srs: return "Intelligente Wiederholung auf Basis des SM-2-Algorithmus"
             }
         }
@@ -33,8 +27,6 @@ struct QuizHubView: View {
         var color: Color {
             switch self {
             case .multipleChoice: return .blue
-            case .cloze: return .purple
-            case .dictation: return .green
             case .srs: return .orange
             }
         }
@@ -87,14 +79,6 @@ struct QuizHubView: View {
         switch mode {
         case .multipleChoice:
             QuizView()
-                .navigationBarTitleDisplayMode(.inline)
-        case .cloze:
-            ClozeQuizView()
-                .navigationTitle("Lückentext")
-                .navigationBarTitleDisplayMode(.inline)
-        case .dictation:
-            DictationView()
-                .navigationTitle("Diktat")
                 .navigationBarTitleDisplayMode(.inline)
         case .srs:
             SRSReviewView()

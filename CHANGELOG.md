@@ -6,6 +6,30 @@ Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/).
 
 ---
 
+## [Unreleased] – Minimalversion (5 Tabs)
+
+Die App ist auf die Kernfunktionen reduziert: **Wörter, Hinzufügen, Karten, Quiz, Statistik**.
+
+### Entfernt
+
+- **Views:** `SynonymsView`, `GrammarView`, `TextAnalysisView`, `PDFLibraryView`, `ClozeQuizView`, `DictationView`, `DictionaryDetailView`, `AppPreviewFile`
+- **Models:** `GrammarModels`, `GrammarRecommendationStore`, `TextAnalysisModels`
+- **Services:** `AIProviderManager`, `AIProviderConfiguration`, `KeychainService`, `GrammarDatabase`, `TextAnalysisService`, `PDFLibraryService`, `SemanticSearchService`
+- **Konfiguration:** Ordner `Config/` (`AIProviders.xcconfig`, `APIKeys.local.xcconfig.example`) samt `baseConfigurationReference` in den Build-Einstellungen
+- **`Info.plist`:** alle `*_API_KEY`-Einträge und `AI_PROXY_SECRET`
+- **Sonstiges:** `.idea/` (jetzt in `.gitignore`), `APP_DOKUMENTATION_DE.md`, `MyFlashcard/README.md`
+
+### Geändert
+
+- **`BrowseView`:** Semantische Suche und Wörterbuch-Button entfernt, die normale Suche und die Statusfilter bleiben.
+- **`QuizHubView`:** nur noch Multiple Choice und SRS-Wiederholung (Lückentext und Diktat entfernt).
+- **`SpeechService`:** Die Audio-Session wird nicht mehr blockierend auf dem Main Thread aktiviert (ab iOS 27 über `activate(options:completionHandler:)`, davor auf einer Hintergrund-Queue).
+- **`README.md`:** auf die Minimalversion gekürzt.
+
+### Beibehalten
+
+- Das SwiftData-Modell `Synonym` bleibt im Schema, damit vorhandene Nutzerdaten erhalten bleiben (keine UI mehr).
+
 ## [Unreleased] – Lernfortschritt & Datenintegrität
 
 ### Geändert

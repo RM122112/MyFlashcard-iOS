@@ -40,5 +40,9 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .modelContainer(for: [Vocabulary.self, Synonym.self, LearningProgress.self], inMemory: true)
+        .modelContainer(for: [
+            Vocabulary.self,
+            Synonym.self,
+            LearningProgress.self
+        ], inMemory: true)
 }

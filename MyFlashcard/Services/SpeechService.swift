@@ -19,8 +19,24 @@ class SpeechService: NSObject, ObservableObject, @preconcurrency AVSpeechSynthes
     
     private func configureAudioSession() {
         do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio)
-            try AVAudioSession.sharedInstance().setActive(true)
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .spokenAudio)
+            // Activation can be slow, so keep it off the main thread.
+            if #available(iOS 27.0, *) {
+                session.activate { _, error in
+                    if let error {
+                        print("Audio Session Error: \(error.localizedDescription)")
+                    }
+                }
+            } else {
+                DispatchQueue.global(qos: .userInitiated).async {
+                    do {
+                        try session.setActive(true)
+                    } catch {
+                        print("Audio Session Error: \(error.localizedDescription)")
+                    }
+                }
+            }
         } catch {
             print("Audio Session Error: \(error.localizedDescription)")
         }

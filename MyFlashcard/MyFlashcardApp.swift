@@ -8,7 +8,7 @@ struct MyFlashcardApp: App {
         let schema = Schema([
             Vocabulary.self,
             Synonym.self,
-            LearningProgress.self      // Phase 1: XP/Streak persistent in SwiftData
+            LearningProgress.self       // Phase 1: XP/Streak persistent in SwiftData
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
