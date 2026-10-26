@@ -1,5 +1,27 @@
 import SwiftUI
 
+struct DictionaryExample: Codable, Hashable, Identifiable {
+    var id = UUID()
+    let source: String
+    let translation: String
+}
+
+struct DictionaryLookup: Codable, Hashable {
+    let query: String
+    let normalizedQuery: String
+    let sourceName: String
+    let sourceURL: String
+    let description: String
+    let translations: [String]
+    let synonyms: [String]
+    let examples: [DictionaryExample]
+    let primaryPartOfSpeech: String?
+    let cachedAt: Date
+    let expiresAt: Date
+    let fromCache: Bool
+    let isStale: Bool
+}
+
 struct DictionaryDetailView: View {
     @StateObject private var viewModel = DictionaryDetailViewModel()
     @State private var searchQuery: String = ""
@@ -379,7 +401,7 @@ class DictionaryDetailViewModel: ObservableObject {
 // MARK: - Service
 
 class BamoozDictionaryService {
-    private let baseURL = "https://dic.b-amooz.com/en/dictionary"
+    private let baseURL = "https://dic.b-amooz.com/de/dictionary"
 
     func lookup(_ word: String) async throws -> DictionaryLookup? {
         let query = word.trimmingCharacters(in: .whitespaces).lowercased()
@@ -515,4 +537,3 @@ class BamoozDictionaryService {
 #Preview {
     DictionaryDetailView()
 }
-

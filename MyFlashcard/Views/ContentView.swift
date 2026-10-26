@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// Main Content View with Tab Navigation (7 Tabs)
+/// Main Content View with Tab Navigation (5 Tabs)
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
 
@@ -25,16 +25,6 @@ struct ContentView: View {
             QuizHubView()
                 .tabItem {
                     Label("Quiz", systemImage: "questionmark.circle")
-                }
-
-            GrammarView()
-                .tabItem {
-                    Label("Grammatik", systemImage: "book")
-                }
-
-            PDFLibraryView()
-                .tabItem {
-                    Label("PDFs", systemImage: "doc.richtext")
                 }
 
             StatsView()

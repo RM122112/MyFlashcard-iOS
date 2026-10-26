@@ -55,13 +55,6 @@ struct InputView: View {
                         )
                         .focused($isTextEditorFocused)
 
-                    if isTextEditorFocused {
-                        Button("Tastatur ausblenden") {
-                            isTextEditorFocused = false
-                        }
-                        .buttonStyle(.bordered)
-                    }
-
                     if !viewModel.importIssues.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Fehler / Hinweise")
